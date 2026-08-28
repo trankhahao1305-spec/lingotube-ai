@@ -28,14 +28,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Standard headers to bypass YouTube consent wall and emulate desktop browser
+// Standard modern headers to emulate real browser requests without triggering expired consent walls
 const YOUTUBE_FETCH_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-  'Accept-Language': 'en-US,en;q=0.9',
-  'Cookie': 'CONSENT=YES+cb.20210328-17-p0.en+FX+100; SOCS=CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg',
-  'Cache-Control': 'no-cache',
-  'Pragma': 'no-cache'
+  'Accept-Language': 'en-US,en;q=0.9'
 };
 
 /**
@@ -557,24 +554,28 @@ async function getYouTubeTranscript(videoId) {
 
   // 3. Fallback: Watch Page HTML Scraping
   if (!captionTracks || captionTracks.length === 0) {
-    const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}&hl=en`;
+    const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}&bpctr=9999999999&has_verified=1`;
     try {
       const response = await fetch(watchUrl, { headers: YOUTUBE_FETCH_HEADERS });
       if (response.ok) {
         const pageHtml = await response.text();
-        const parsedResp = extractJSONFromHTML(pageHtml, 'ytInitialPlayerResponse');
-        if (parsedResp) {
-          if (parsedResp.captions && parsedResp.captions.playerCaptionsTracklistRenderer) {
-            captionTracks = parsedResp.captions.playerCaptionsTracklistRenderer.captionTracks || [];
-          }
-          if (parsedResp.videoDetails && !videoDetails) {
-            videoDetails = parsedResp.videoDetails;
+        const tracksMatch = pageHtml.match(/"captionTracks":\s*(\[.*?\])/);
+        if (tracksMatch) {
+          try {
+            captionTracks = JSON.parse(tracksMatch[1]);
+          } catch (e) {
+            captionTracks = extractArrayFromHTML(pageHtml, 'captionTracks') || [];
           }
         }
         if (!captionTracks || captionTracks.length === 0) {
-          const tracksArray = extractArrayFromHTML(pageHtml, 'captionTracks');
-          if (Array.isArray(tracksArray) && tracksArray.length > 0) {
-            captionTracks = tracksArray;
+          const parsedResp = extractJSONFromHTML(pageHtml, 'ytInitialPlayerResponse');
+          if (parsedResp) {
+            if (parsedResp.captions && parsedResp.captions.playerCaptionsTracklistRenderer) {
+              captionTracks = parsedResp.captions.playerCaptionsTracklistRenderer.captionTracks || [];
+            }
+            if (parsedResp.videoDetails && !videoDetails) {
+              videoDetails = parsedResp.videoDetails;
+            }
           }
         }
       }
