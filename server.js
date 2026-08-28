@@ -305,8 +305,7 @@ async function fetchInnerTubePlayerData(videoId) {
       headers: {
         'User-Agent': 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip',
         'X-YouTube-Client-Name': '3',
-        'X-YouTube-Client-Version': '19.09.37',
-        'Origin': 'https://www.youtube.com'
+        'X-YouTube-Client-Version': '19.09.37'
       },
       clientPayload: {
         clientName: 'ANDROID',
@@ -318,47 +317,29 @@ async function fetchInnerTubePlayerData(videoId) {
       }
     },
     {
-      name: 'IOS',
+      name: 'WEB_EMBEDDED_PLAYER',
       headers: {
-        'User-Agent': 'com.google.ios.youtube/19.09.3 (iPhone14,3; U; CPU iOS 15_6 like Mac OS X)',
-        'X-YouTube-Client-Name': '5',
-        'X-YouTube-Client-Version': '19.09.3',
-        'Origin': 'https://www.youtube.com'
+        'User-Agent': YOUTUBE_FETCH_HEADERS['User-Agent'],
+        'X-YouTube-Client-Name': '56',
+        'X-YouTube-Client-Version': '1.20240401.01.00'
       },
       clientPayload: {
-        clientName: 'IOS',
-        clientVersion: '19.09.3',
-        hl: 'en',
-        gl: 'US',
-        utcOffsetMinutes: 0
-      }
-    },
-    {
-      name: 'TVHTML5_SIMPLY_EMBEDDED_PLAYER',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (PlayStation 4 9.00) AppleWebKit/537.73 (KHTML, like Gecko)',
-        'X-YouTube-Client-Name': '85',
-        'X-YouTube-Client-Version': '2.0',
-        'Origin': 'https://www.youtube.com'
-      },
-      clientPayload: {
-        clientName: 'TVHTML5_SIMPLY_EMBEDDED_PLAYER',
-        clientVersion: '2.0',
+        clientName: 'WEB_EMBEDDED_PLAYER',
+        clientVersion: '1.20240401.01.00',
         hl: 'en',
         gl: 'US'
       }
     },
     {
-      name: 'WEB_EMBEDDED_PLAYER',
+      name: 'WEB',
       headers: {
         'User-Agent': YOUTUBE_FETCH_HEADERS['User-Agent'],
-        'X-YouTube-Client-Name': '56',
-        'X-YouTube-Client-Version': '1.20240401.01.00',
-        'Origin': 'https://www.youtube.com'
+        'X-YouTube-Client-Name': '1',
+        'X-YouTube-Client-Version': '2.20240401.01.00'
       },
       clientPayload: {
-        clientName: 'WEB_EMBEDDED_PLAYER',
-        clientVersion: '1.20240401.01.00',
+        clientName: 'WEB',
+        clientVersion: '2.20240401.01.00',
         hl: 'en',
         gl: 'US'
       }
@@ -377,7 +358,12 @@ async function fetchInnerTubePlayerData(videoId) {
           context: {
             client: client.clientPayload
           },
-          videoId: videoId
+          videoId: videoId,
+          playbackContext: {
+            contentPlaybackContext: {
+              html5Preference: "HTML5_PREF_WANTS"
+            }
+          }
         })
       });
 
