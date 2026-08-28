@@ -881,6 +881,86 @@ async function translateWithGoogle(text) {
   return clean;
 }
 
+// Global persistent in-memory & file-backed user database
+const USERS_DB_PATH = path.join(__dirname, 'users.json');
+let usersCache = [];
+try {
+  if (fs.existsSync(USERS_DB_PATH)) {
+    usersCache = JSON.parse(fs.readFileSync(USERS_DB_PATH, 'utf8') || '[]');
+  }
+} catch (e) {
+  usersCache = [];
+}
+
+function saveUsersToDisk() {
+  try {
+    fs.writeFileSync(USERS_DB_PATH, JSON.stringify(usersCache, null, 2), 'utf8');
+  } catch (e) {}
+}
+
+// API Endpoint: POST /api/auth/register (Cloud User Registration)
+app.post('/api/auth/register', (req, res) => {
+  const { email, password, name } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: 'Vui lòng cung cấp email và mật khẩu.' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const existing = usersCache.find(u => u.email.toLowerCase() === cleanEmail);
+  if (existing) {
+    return res.status(400).json({ success: false, error: 'already_exists', message: 'Địa chỉ email này đã được đăng ký.' });
+  }
+
+  const displayName = (name || cleanEmail.split('@')[0]).trim();
+  const newUser = {
+    uid: 'user_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+    email: cleanEmail,
+    password: password,
+    displayName: displayName,
+    createdAt: new Date().toISOString()
+  };
+
+  usersCache.push(newUser);
+  saveUsersToDisk();
+
+  return res.json({
+    success: true,
+    user: {
+      uid: newUser.uid,
+      email: newUser.email,
+      displayName: newUser.displayName
+    }
+  });
+});
+
+// API Endpoint: POST /api/auth/login (Cloud User Sign In)
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập email và mật khẩu.' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const user = usersCache.find(u => u.email.toLowerCase() === cleanEmail);
+
+  if (!user) {
+    return res.status(404).json({ success: false, error: 'not_found', message: 'Tài khoản email này chưa được đăng ký.' });
+  }
+
+  if (user.password && user.password !== password) {
+    return res.status(401).json({ success: false, error: 'wrong_password', message: 'Mật khẩu không chính xác.' });
+  }
+
+  return res.json({
+    success: true,
+    user: {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName || cleanEmail.split('@')[0]
+    }
+  });
+});
+
 // API Endpoint: POST /api/translate (Instant Multi-Sentence Translation)
 app.post('/api/translate', async (req, res) => {
   const { text, texts } = req.body;

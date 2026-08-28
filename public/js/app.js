@@ -5216,9 +5216,6 @@ Return ONLY a valid JSON object with the following schema:
   /**
    * Open Full Transcript AI Sync Modal
    */
-  /**
-   * Open Full Transcript AI Sync Modal
-   */
   openFullTranscriptSyncModal() {
     if (!this.currentVideoId || !this.fullTranscript || this.fullTranscript.length === 0) {
       this.showToast('Vui lòng tải một video trước khi đồng bộ phụ đề.', 'warning');
@@ -5227,18 +5224,25 @@ Return ONLY a valid JSON object with the following schema:
 
     const videoUrl = `https://www.youtube.com/watch?v=${this.currentVideoId}`;
     const videoTitle = this.videoTitle || 'English Listening Practice';
-    const rawTranscript = this.fullTranscript.map((s, i) => `#${i + 1} [${this.formatSeconds(s.startTime, true)} - ${this.formatSeconds(s.endTime, true)}]: ${s.text}`).join('\n');
+    const isPlaceholder = !this.isTranscriptEdited && (this.fullTranscript.length <= 3 && (this.fullTranscript[0]?.text?.includes('Đoạn 1') || this.fullTranscript[0]?.text?.includes('00:00 - 00:15')));
+
+    let rawTranscriptContent = '';
+    if (isPlaceholder || this.fullTranscript.length <= 3) {
+      rawTranscriptContent = '(Video này chưa có phụ đề sẵn, hãy nghe và bóc tách toàn bộ lời thoại tiếng Anh trực tiếp từ link video trên)';
+    } else {
+      rawTranscriptContent = this.fullTranscript.map((s, i) => `#${i + 1} [${this.formatSeconds(s.startTime, true)} - ${this.formatSeconds(s.endTime, true)}]: ${s.text}`).join('\n');
+    }
 
     const masterPrompt = `Bạn là chuyên gia ngôn ngữ học tiếng Anh và biên tập phụ đề video chuyên nghiệp.
 🎥 LINK VIDEO YOUTUBE GỐC: ${videoUrl}
 🎬 TIÊU ĐỀ VIDEO: "${videoTitle}"
 
-👉 HƯỚNG DẪN CHO GOOGLE GEMINI / AI:
+👉 HƯỚNG DẪN CHO GOOGLE GEMINI / CHATGPT / CLAUDE:
 - Bạn hãy trực tiếp nghe và phân tích video YouTube trên để bắt trọn vẹn ngữ cảnh, nhịp thở, ngữ điệu và khoảng dừng (pauses) tự nhiên của người nói.
 - Giúp tôi phân tích và chia TOÀN BỘ phụ đề video sau đây thành các MỆNH ĐỀ / CÂU HOÀN CHỈNH KÈM THỜI GIAN CHUẨN XÁC THEO ÂM THANH VIDEO:
 
---- TOÀN BỘ PHỤ ĐỀ GỐC CỦA VIDEO (${this.fullTranscript.length} dòng) ---
-${rawTranscript}
+--- TOÀN BỘ PHỤ ĐỀ GỐC CỦA VIDEO ---
+${rawTranscriptContent}
 
 --- YÊU CẦU XỬ LÝ QUAN TRỌNG: ---
 1. ✂️ QUY TẮC NGẮT DÒNG THEO MỆNH ĐỀ & DẤU PHẨY:
@@ -5248,6 +5252,10 @@ ${rawTranscript}
    - Đầu mỗi dòng bắt buộc có mốc thời gian [phút:giây - phút:giây] khớp chính xác với thời gian diễn giả nói mệnh đề đó trong video (dựa vào audio video và phụ đề gốc).
 3. 🔤 VIẾT HOA & DẤU CÂU:
    - Viết hoa đầu câu, thêm dấu phẩy, chấm, ngoặc kép đầy đủ, giữ nguyên 100% từ ngữ của người nói.
+
+--- YÊU CẦU ĐẦU RA ---
+- Chỉ có các mẫu phụ đề video theo đúng mốc thời gian từ đầu đến hết video.
+- Không bao gồm link video, lời chào hoặc giải thích ngoài lề trong câu trả lời.
 
 --- ĐỊNH DẠNG ĐẦU RA MẪU: ---
 [00:00.2 - 00:03.5] Hi there, and welcome to the Five Minute English Podcast,
@@ -5262,7 +5270,7 @@ ${rawTranscript}
 
     const badge = document.getElementById('fullSyncSentenceCountBadge');
     if (badge) {
-      badge.textContent = `Toàn bài (${this.fullTranscript.length} dòng)`;
+      badge.textContent = isPlaceholder ? 'Yêu cầu AI bóc tách toàn bộ sub' : `Toàn bài (${this.fullTranscript.length} dòng)`;
     }
 
     const modal = document.getElementById('fullTranscriptSyncModal');
@@ -7955,7 +7963,49 @@ ${linesList}
       }
     }
 
-    // 2. Built-in Local & Cloud Profile Engine (Zero-setup)
+    // 2. Cloud Server Auth Engine (Persists across Incognito, Mobile & All Browsers)
+    try {
+      const authRes = await fetch(`${this.apiBaseUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (authRes.ok) {
+        const authData = await authRes.json();
+        if (authData.success && authData.user) {
+          this.user = {
+            uid: authData.user.uid,
+            displayName: authData.user.displayName || email.split('@')[0],
+            email: authData.user.email,
+            isAnonymous: false
+          };
+
+          localStorage.setItem('lingotube_current_user', JSON.stringify(this.user));
+          this.updateAuthUI(this.user);
+          this.closeAuthModal();
+          this.showToast(`🎉 Đăng nhập thành công! Xin chào ${this.user.displayName}.`, 'success');
+          this.syncAllDataToCloud();
+          return;
+        }
+      } else {
+        const errData = await authRes.json().catch(() => ({}));
+        if (errData.error === 'not_found') {
+          this.showToast('Tài khoản email này chưa được đăng ký. Bạn hãy chọn tab Đăng Ký Mới.', 'warning');
+          this.switchAuthTab('signup');
+          const signUpEmail = document.getElementById('inputSignUpEmail');
+          if (signUpEmail) signUpEmail.value = email;
+          return;
+        } else if (errData.error === 'wrong_password') {
+          this.showToast('Mật khẩu không chính xác. Vui lòng kiểm tra lại.', 'error');
+          return;
+        }
+      }
+    } catch (apiErr) {
+      console.warn('Cloud login API fallback to local:', apiErr.message);
+    }
+
+    // 3. LocalStorage Fallback (Offline Mode)
     try {
       const registeredUsers = JSON.parse(localStorage.getItem('lingotube_registered_users') || '[]');
       const user = registeredUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
@@ -8042,7 +8092,52 @@ ${linesList}
       }
     }
 
-    // 2. Built-in Local & Cloud Profile Engine (Zero-setup)
+    // 2. Cloud Server Registration (Persists across Incognito, Mobile & All Browsers)
+    try {
+      const regRes = await fetch(`${this.apiBaseUrl}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name })
+      });
+
+      if (regRes.ok) {
+        const regData = await regRes.json();
+        if (regData.success && regData.user) {
+          this.user = {
+            uid: regData.user.uid,
+            displayName: regData.user.displayName || name || email.split('@')[0],
+            email: regData.user.email,
+            isAnonymous: false
+          };
+
+          localStorage.setItem('lingotube_current_user', JSON.stringify(this.user));
+          
+          // Also cache locally
+          const registeredUsers = JSON.parse(localStorage.getItem('lingotube_registered_users') || '[]');
+          registeredUsers.push({ ...this.user, password });
+          localStorage.setItem('lingotube_registered_users', JSON.stringify(registeredUsers));
+
+          this.updateAuthUI(this.user);
+          this.closeAuthModal();
+          this.showToast(`🎉 Tạo tài khoản thành công! Xin chào ${this.user.displayName}, toàn bộ từ vựng & bài học đã được lưu an toàn!`, 'success');
+          this.syncAllDataToCloud();
+          return;
+        }
+      } else {
+        const errData = await regRes.json().catch(() => ({}));
+        if (errData.error === 'already_exists') {
+          this.showToast('Địa chỉ email này đã được sử dụng. Bạn hãy chọn tab Đăng Nhập.', 'warning');
+          this.switchAuthTab('signin');
+          const signInEmail = document.getElementById('inputSignInEmail');
+          if (signInEmail) signInEmail.value = email;
+          return;
+        }
+      }
+    } catch (apiErr) {
+      console.warn('Cloud register API fallback to local:', apiErr.message);
+    }
+
+    // 3. LocalStorage Fallback (Offline Mode)
     try {
       const registeredUsers = JSON.parse(localStorage.getItem('lingotube_registered_users') || '[]');
       const existingUser = registeredUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
