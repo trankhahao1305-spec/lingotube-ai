@@ -1,0 +1,23 @@
+{
+  "name": "lingotube-ai",
+  "version": "1.0.0",
+  "description": "English listening practice web app with YouTube clips, precision trimmer, and AI analysis",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "english-learning",
+    "youtube-transcript",
+    "shadowing",
+    "gemini-ai"
+  ],
+  "author": "LingoTube AI Team",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "youtube-transcript": "^1.3.0"
+  }
+}

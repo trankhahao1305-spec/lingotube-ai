@@ -1,0 +1,3312 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#f8fafc] text-slate-900">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LingoTube AI — YouTube English Listening & Clip Trimmer</title>
+  <meta name="description" content="Master English listening with YouTube clips, smart caption deduplication, lexical chunking, and AI feedback." />
+
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            gemini: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              200: '#bae0fd',
+              300: '#7cc5fb',
+              400: '#38bdf8',
+              500: '#3b82f6',
+              600: '#1a73e8',
+              700: '#1557b0',
+              800: '#174ea6',
+              900: '#183d73',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Firebase Compat SDKs (v10) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="h-screen bg-[#f8fafc] text-slate-900 flex font-sans overflow-hidden selection:bg-blue-500 selection:text-white">
+
+  <!-- ================================================================= -->
+  <!-- 1. LEFT SIDEBAR (GOOGLE GEMINI APP STYLE - LIGHT THEME)           -->
+  <!-- ================================================================= -->
+  <aside id="appSidebar" class="fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-200 flex flex-col justify-between transition-transform duration-300 transform -translate-x-full backdrop-blur-xl shrink-0 shadow-2xl">
+    
+    <!-- Sidebar Top: Brand Logo & New Video Action -->
+    <div class="p-4 space-y-4">
+      <!-- Logo + Close button (Always visible on Desktop & Mobile) -->
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 cursor-pointer" onclick="app.openLandingHomeView(); app.toggleSidebar(false)">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
+            <i class="fa-brands fa-youtube text-base text-white"></i>
+          </div>
+          <div>
+            <span class="font-heading font-extrabold text-base tracking-tight text-slate-900">LingoTube <span class="text-blue-600">AI</span></span>
+            <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-600 border border-blue-200 ml-1">v2.0</span>
+          </div>
+        </div>
+        
+        <!-- Prominent Close Button [X] -->
+        <button id="btnCloseSidebar" onclick="app.toggleSidebar(false)" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center transition border border-slate-200 shrink-0 shadow-sm" title="Đóng Menu (✕)">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <!-- Primary Action: + New Video Button (Gemini-style "+ New chat") -->
+      <button 
+        onclick="app.openLandingHomeView(); app.toggleSidebar(false)" 
+        class="w-full py-2.5 px-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 active:scale-98"
+      >
+        <i class="fa-solid fa-plus text-sm"></i>
+        <span>Nhập Video mới</span>
+      </button>
+
+      <!-- Main Sidebar Nav Items -->
+      <div class="space-y-1 pt-1 text-xs">
+        <button onclick="app.openWorkspaceView(); app.switchWorkspaceTab('tuVung'); app.toggleSidebar(false)" class="w-full flex items-center justify-between p-2.5 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer">
+          <div class="flex items-center gap-2.5">
+            <i class="fa-solid fa-layer-group text-blue-600 text-sm w-4 text-center"></i>
+            <span class="font-semibold">Sổ từ vựng & 3D Cards</span>
+          </div>
+          <span id="sidebarVocabBadge" class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 font-mono font-bold border border-slate-200">0</span>
+        </button>
+
+        <button onclick="app.openWorkspaceView(); app.switchWorkspaceTab('shadowing'); app.toggleSidebar(false)" class="w-full flex items-center justify-between p-2.5 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer">
+          <div class="flex items-center gap-2.5">
+            <i class="fa-solid fa-microphone text-indigo-600 text-sm w-4 text-center"></i>
+            <span class="font-semibold">Phòng thu Shadowing</span>
+          </div>
+          <span class="text-[10px] px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-600 font-mono font-semibold border border-indigo-200">AI Coach</span>
+        </button>
+
+        <button onclick="app.openSavedClipsModal(); app.toggleSidebar(false)" class="w-full flex items-center justify-between p-2.5 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition">
+          <div class="flex items-center gap-2.5">
+            <i class="fa-solid fa-bookmark text-blue-600 text-sm w-4 text-center"></i>
+            <span class="font-semibold">Thư viện Clip đã lưu</span>
+          </div>
+          <span id="sidebarSavedClipsBadge" class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 font-mono font-bold border border-slate-200">0</span>
+        </button>
+
+        <button onclick="app.openDailyCheckInModal(); app.toggleSidebar(false)" class="w-full flex items-center justify-between p-2.5 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition">
+          <div class="flex items-center gap-2.5">
+            <i class="fa-solid fa-fire text-amber-500 text-sm w-4 text-center"></i>
+            <span class="font-semibold">Điểm danh & Chuỗi học</span>
+          </div>
+          <span id="sidebarStreakBadge" class="text-[10px] px-1.5 py-0.2 rounded-full bg-orange-50 text-orange-700 font-mono font-bold border border-orange-200">0 ngày</span>
+        </button>
+      </div>
+
+      <!-- Recents Section (Gemini-style Recents) -->
+      <div class="pt-3 border-t border-slate-200 space-y-1.5">
+        <div class="flex items-center justify-between px-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          <span>Video gần đây</span>
+          <i class="fa-solid fa-clock-rotate-left text-slate-400"></i>
+        </div>
+        <div id="sidebarRecentVideosList" class="space-y-1 max-h-48 overflow-y-auto text-xs no-scrollbar">
+          <!-- Dynamic Recent Video Items -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Bottom: Account & Settings -->
+    <div class="p-3 border-t border-slate-200 bg-white space-y-2">
+      <div class="flex items-center justify-between gap-2">
+        <div onclick="app.handleSidebarAccountClick()" class="flex items-center gap-2.5 min-w-0 p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer flex-1" title="Xem hồ sơ cá nhân">
+          <div id="sidebarUserAvatar" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs shrink-0 font-bold">
+            <i class="fa-solid fa-user"></i>
+          </div>
+          <div class="min-w-0">
+            <div id="sidebarAuthUserText" class="text-xs font-bold text-slate-900 truncate">Guest User</div>
+            <div id="sidebarAuthSubText" class="text-[10px] text-slate-500 truncate">Nhấn để đăng nhập</div>
+          </div>
+        </div>
+
+        <button onclick="app.openSettingsModal(); app.toggleSidebar(false)" title="Cài đặt & Sao lưu dữ liệu" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 flex items-center justify-center transition border border-slate-200 shrink-0 cursor-pointer">
+          <i class="fa-solid fa-sliders text-xs"></i>
+        </button>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- Backdrop Overlay (Closes sidebar on click) -->
+  <div id="sidebarBackdrop" onclick="app.toggleSidebar(false)" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 hidden"></div>
+
+  <!-- ================================================================= -->
+  <!-- 2. MAIN CONTENT AREA (Flex-1, Scrollable - LIGHT THEME)           -->
+  <!-- ================================================================= -->
+  <div id="appMainArea" class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto bg-[#f8fafc]">
+
+    <!-- TOP HEADER BAR (Sticky Top - Ultra Clean & Minimalist) -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-3 sm:px-6 py-2 sm:py-2.5 flex items-center justify-between gap-2 shrink-0">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <!-- Sidebar Hamburger Toggle Button (Desktop & Mobile) -->
+        <button id="btnOpenSidebar" onclick="app.toggleSidebar(true)" class="p-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 transition shrink-0 border border-slate-200 shadow-sm cursor-pointer" title="Mở Menu (☰)">
+          <i class="fa-solid fa-bars text-sm"></i>
+        </button>
+
+        <!-- Brand Logo Icon Link (Icon Only) -->
+        <div class="flex items-center gap-2 cursor-pointer" onclick="app.openLandingHomeView()" title="Về trang chủ LingoTube AI">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0 hover:scale-105 transition">
+            <i class="fa-brands fa-youtube text-sm text-white"></i>
+          </div>
+        </div>
+
+        <!-- Current Video Title Pill (if active) -->
+        <div id="topHeaderActiveVideoPill" class="hidden flex items-center gap-2 min-w-0 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-xs">
+          <i class="fa-brands fa-youtube text-red-500 shrink-0"></i>
+          <span id="topHeaderVideoTitle" class="text-slate-800 font-semibold truncate max-w-[150px] sm:max-w-xs md:max-w-md">YouTube Video</span>
+        </div>
+      </div>
+
+      <!-- Right: Live Streak & Saved Clips Icon Badges -->
+      <div class="flex items-center gap-2 shrink-0">
+        <!-- Streak Live Badge -->
+        <button 
+          id="btnHeaderStreak" 
+          onclick="app.openDailyCheckInModal()" 
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 hover:text-orange-800 transition text-xs border border-orange-200 shadow-xs active:scale-95 cursor-pointer" 
+          title="Điểm danh & Chuỗi ngày học tập (Streak)"
+        >
+          <i class="fa-solid fa-fire text-amber-500 text-sm"></i>
+          <span class="font-black font-mono text-xs" id="headerStreakCountText">0</span>
+        </button>
+
+        <!-- Saved Clips Live Badge -->
+        <button 
+          id="btnHeaderSavedClips"
+          onclick="app.openSavedClipsModal()" 
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 transition text-xs border border-blue-200 shadow-xs active:scale-95 cursor-pointer" 
+          title="Thư viện các đoạn clip đã cắt"
+        >
+          <i class="fa-solid fa-bookmark text-blue-600 text-xs"></i>
+          <span id="savedClipsCountBadge" class="font-black font-mono text-xs">0</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ================================================================= -->
+    <!-- 4-STEP LEARNING WORKFLOW + 2 EXTENDED TOOLS (Mobile-First Bar)    -->
+    <!-- ================================================================= -->
+    <div id="topStepperBar" class="hidden bg-white/95 border-b border-slate-200 px-2 sm:px-4 sticky top-[50px] z-20 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-1.5 sm:gap-4 py-2">
+      
+      <!-- LEFT / CENTER: CORE 4-STEP STEPPER -->
+      <div class="flex items-center gap-1 sm:gap-2 flex-1 max-w-lg min-w-0">
+        <!-- Prev Step Button -->
+        <button 
+          id="btnStepperPrev" 
+          onclick="app.goToPrevCoreStep()" 
+          class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none text-slate-700 hover:text-slate-900 flex items-center justify-center transition border border-slate-200 shrink-0"
+          title="Bước trước"
+        >
+          <i class="fa-solid fa-chevron-left text-xs"></i>
+        </button>
+
+        <!-- Current Step Dropdown Trigger -->
+        <div class="relative flex-1 min-w-0">
+          <button 
+            id="btnCurrentStepDropdown" 
+            onclick="app.toggleStepSelectorDropdown()" 
+            class="w-full flex items-center justify-between px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-blue-500/40 text-slate-900 text-xs sm:text-sm font-bold transition shadow-sm"
+          >
+            <div class="flex items-center gap-1.5 truncate">
+              <span id="stepperStepBadge" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono border border-blue-200">1/4</span>
+              <span id="stepperStepTitle" class="truncate">1. Cắt clip</span>
+            </div>
+            <i id="iconStepDropdown" class="fa-solid fa-chevron-down text-[10px] text-blue-600 shrink-0 ml-1"></i>
+          </button>
+
+          <!-- 4-STEP DROPDOWN MENU -->
+          <div id="stepSelectorDropdown" class="hidden absolute top-full left-0 mt-1.5 w-64 sm:w-72 bg-white border border-slate-200 rounded-2xl p-1.5 shadow-2xl z-50 glass-dropdown space-y-1">
+            <div class="px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+              Lộ trình 4 bước học cốt lõi
+            </div>
+            
+            <!-- Step 1 -->
+            <button onclick="app.switchWorkspaceTab('trimmer'); app.toggleStepSelectorDropdown(false)" class="w-full text-left p-2.5 rounded-xl hover:bg-slate-50 transition flex items-center justify-between text-xs text-slate-800 cursor-pointer">
+              <div class="flex items-center gap-2">
+                <span class="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center font-mono font-bold text-[10px]">1</span>
+                <span class="font-bold text-slate-900">✂️ Cắt Clip</span>
+              </div>
+              <span id="badgeStepCheck_trimmer" class="text-[10px] text-blue-600 font-mono">●</span>
+            </button>
+
+            <!-- Step 2 -->
+            <button onclick="app.switchWorkspaceTab('vachLa'); app.toggleStepSelectorDropdown(false)" class="w-full text-left p-2.5 rounded-xl hover:bg-slate-50 transition flex items-center justify-between text-xs text-slate-800 cursor-pointer">
+              <div class="flex items-center gap-2">
+                <span class="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center font-mono font-bold text-[10px]">2</span>
+                <span class="font-bold text-slate-900">🪄 Vạch Lá Tìm Sâu</span>
+              </div>
+              <span id="badgeStepCheck_vachLa" class="text-[10px] text-slate-400 font-mono">○</span>
+            </button>
+
+            <!-- Step 3 -->
+            <button onclick="app.switchWorkspaceTab('tamSao'); app.toggleStepSelectorDropdown(false)" class="w-full text-left p-2.5 rounded-xl hover:bg-slate-50 transition flex items-center justify-between text-xs text-slate-800 cursor-pointer">
+              <div class="flex items-center gap-2">
+                <span class="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center font-mono font-bold text-[10px]">3</span>
+                <span class="font-bold text-slate-900">🌐 Tam Sao Thất Bản</span>
+              </div>
+              <span id="badgeStepCheck_tamSao" class="text-[10px] text-slate-400 font-mono">○</span>
+            </button>
+
+            <!-- Step 4 -->
+            <button onclick="app.switchWorkspaceTab('listen'); app.toggleStepSelectorDropdown(false)" class="w-full text-left p-2.5 rounded-xl hover:bg-slate-50 transition flex items-center justify-between text-xs text-slate-800 cursor-pointer">
+              <div class="flex items-center gap-2">
+                <span class="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center font-mono font-bold text-[10px]">4</span>
+                <span class="font-bold text-slate-900">🎧 Luyện Nghe</span>
+              </div>
+              <span id="badgeStepCheck_listen" class="text-[10px] text-slate-400 font-mono">○</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Next Step Button -->
+        <button 
+          id="btnStepperNext" 
+          onclick="app.goToNextCoreStep()" 
+          class="px-2.5 sm:px-3 py-1.5 h-8 sm:h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm flex items-center gap-1 transition shadow-sm shrink-0"
+          title="Bước tiếp theo"
+        >
+          <span id="btnStepperNextText" class="hidden sm:inline">Tiếp</span>
+          <i class="fa-solid fa-chevron-right text-xs"></i>
+        </button>
+      </div>
+
+      <!-- RIGHT: 2 EXTENDED TOOLS (Shadowing & Sổ từ vựng 3D) -->
+      <div class="flex items-center gap-1 sm:gap-2 shrink-0 border-l border-slate-200 pl-1.5 sm:pl-3">
+        <!-- Shadowing Trigger -->
+        <button 
+          id="btnTabShadowing" 
+          onclick="app.switchWorkspaceTab('shadowing')" 
+          class="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 text-xs font-semibold transition shadow-sm"
+          title="Phòng thu âm Shadowing & Chấm điểm AI"
+        >
+          <i class="fa-solid fa-microphone text-indigo-600 text-xs"></i>
+          <span class="hidden sm:inline">Shadowing</span>
+        </button>
+
+        <!-- Flashcards / Sổ từ vựng Trigger -->
+        <button 
+          id="btnTabTuVung" 
+          onclick="app.switchWorkspaceTab('tuVung')" 
+          class="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border border-slate-200 text-xs font-semibold transition shadow-sm"
+          title="Sổ từ vựng & Flashcards 3D"
+        >
+          <i class="fa-solid fa-layer-group text-blue-600 text-xs"></i>
+          <span class="hidden sm:inline">Từ vựng</span>
+          <span id="navTuVungCountBadge" class="text-[10px] px-1 py-0.2 rounded-full bg-slate-100 text-slate-700 font-mono font-bold border border-slate-200">0</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Slim 4-Segment Progress Bar -->
+    <div class="max-w-7xl mx-auto grid grid-cols-4 gap-1 pb-1 px-1">
+      <div id="progSegment_trimmer" class="h-1 rounded-full bg-blue-600 transition-all duration-300"></div>
+      <div id="progSegment_vachLa" class="h-1 rounded-full bg-slate-200 transition-all duration-300"></div>
+      <div id="progSegment_tamSao" class="h-1 rounded-full bg-slate-200 transition-all duration-300"></div>
+      <div id="progSegment_listen" class="h-1 rounded-full bg-slate-200 transition-all duration-300"></div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MAIN CONTAINER                                                    -->
+  <!-- ================================================================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-2.5 sm:p-4 md:p-6 space-y-4">
+
+    <!-- ============================================================= -->
+    <!-- VIEW 1: GEMINI-STYLE LANDING HOME SCREEN (LIGHT THEME)        -->
+    <!-- ============================================================= -->
+    <section id="landingHomeView" class="max-w-3xl w-full mx-auto flex flex-col justify-between items-center min-h-[calc(100vh-120px)] py-4 sm:py-8">
+      
+      <!-- Top / Center Spaced Hero Greeting -->
+      <div class="w-full flex-1 flex flex-col justify-center items-center text-center my-auto">
+        <div class="space-y-2 animate-in fade-in zoom-in-95 duration-300">
+          <h1 class="font-heading font-black text-4xl sm:text-6xl text-slate-900 tracking-tight leading-tight">
+            Hello, <span id="landingGreetingName" class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">bạn</span> 👋
+          </h1>
+          <p class="text-xs sm:text-base text-slate-400 font-medium tracking-wide">
+            What would you like to practice today?
+          </p>
+        </div>
+      </div>
+
+      <!-- Bottom Chat / Input Box (Pinned near bottom like Gemini / ChatGPT) -->
+      <div class="w-full pt-4 pb-2 sm:pb-4">
+        <div class="glass-panel p-2 sm:p-2.5 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xl bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all duration-300">
+          <form id="landingVideoImportForm" onsubmit="app.handleLandingVideoImport(event)" class="flex flex-col sm:flex-row items-center gap-2">
+            <div class="relative flex-1 flex items-center min-w-0 w-full">
+              <div class="pl-3 pr-2 text-red-500 flex items-center pointer-events-none shrink-0">
+                <i class="fa-brands fa-youtube text-lg sm:text-xl"></i>
+              </div>
+              <input 
+                type="text" 
+                id="landingYoutubeUrlInput" 
+                placeholder="Paste a YouTube link (e.g. https://youtu.be/...)" 
+                class="w-full py-2.5 sm:py-3 bg-transparent text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none min-w-0 truncate"
+                required 
+              />
+              <button 
+                type="button" 
+                onclick="app.pasteLandingClipboard()" 
+                class="px-2.5 py-1.5 text-xs text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition mr-1 flex items-center gap-1 shrink-0 cursor-pointer"
+                title="Dán từ bộ nhớ tạm"
+              >
+                <i class="fa-regular fa-clipboard"></i>
+                <span class="hidden sm:inline">Dán</span>
+              </button>
+            </div>
+
+            <button 
+              type="submit" 
+              id="btnLandingFetchTranscript" 
+              class="w-full sm:w-auto px-5 sm:px-6 py-2.5 sm:py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl sm:rounded-2xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10 active:scale-98 shrink-0 cursor-pointer"
+            >
+              <i class="fa-solid fa-bolt text-amber-400"></i>
+              <span>Bắt đầu học</span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================= -->
+    <!-- VIEW 2: ACTIVE WORKSPACE (Single-Column Focus Layout)         -->
+    <!-- ============================================================= -->
+    <div id="activeWorkspaceView" class="hidden">
+      <div id="mainWorkspaceSection" class="max-w-5xl mx-auto space-y-4">
+        
+        <!-- UNIFIED TOP VIDEO & ACTIVE CLIP BAR -->
+        <div id="unifiedTopVideoControlBar" class="glass-card rounded-2xl p-2 sm:p-2.5 border border-slate-200 bg-white shadow-sm space-y-1.5">
+          
+          <!-- Top Row: Video Toggle + Active Clip Badge + Action Controls (Strictly Single Row) -->
+          <div class="flex items-center justify-between gap-1.5 overflow-x-auto no-scrollbar">
+            <!-- Left: Toggle Video & Podcast Buttons -->
+            <div class="flex items-center gap-1 shrink-0">
+              <button 
+                id="btnToggleVideoPlayer" 
+                onclick="app.toggleVideoPlayer()" 
+                class="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200 text-xs font-bold transition shadow-2xs cursor-pointer"
+                title="Ẩn / Hiện màn hình video"
+              >
+                <i class="fa-brands fa-youtube text-red-500 text-sm"></i>
+                <span id="btnToggleVideoPlayerText">Xem Video</span>
+                <i id="iconToggleVideoPlayer" class="fa-solid fa-chevron-down text-[8px] text-slate-500"></i>
+              </button>
+
+              <button 
+                id="btnTogglePodcastMode" 
+                onclick="app.togglePodcastMode()" 
+                class="w-7 h-7 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white flex items-center justify-center shadow-2xs transition active:scale-95 cursor-pointer shrink-0"
+                title="Chế độ Podcast / Audio siêu nhẹ"
+              >
+                <i class="fa-solid fa-podcast text-amber-300 text-xs"></i>
+              </button>
+            </div>
+
+            <!-- Center: Active Clip Summary Pill -->
+            <div class="flex items-center gap-1 px-2 py-1 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-mono font-bold shrink-0">
+              <i class="fa-solid fa-scissors text-blue-600 text-[10px]"></i>
+              <span id="clipDurationSummary">00:00.0 - 00:00.0 (0.0s)</span>
+            </div>
+
+            <!-- Right: Action Controls (Icons: Xuất MP3, Chỉnh giây, Tắt mắt, Lưu clip) -->
+            <div class="flex items-center gap-1 shrink-0">
+              <button 
+                onclick="app.exportAudioClipMp3()" 
+                class="w-7 h-7 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs transition flex items-center justify-center cursor-pointer shadow-2xs"
+                title="Tải file MP3 về máy"
+              >
+                <i class="fa-solid fa-download text-emerald-600 text-xs"></i>
+              </button>
+
+              <button 
+                id="btnToggleRangeSliders" 
+                onclick="app.toggleRangeSliders()" 
+                class="w-7 h-7 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs border border-slate-200 transition flex items-center justify-center cursor-pointer shadow-2xs"
+                title="Mở thanh trượt tinh chỉnh 0.1s"
+              >
+                <i class="fa-solid fa-sliders text-blue-600 text-xs"></i>
+              </button>
+
+              <button 
+                id="btnToggleFocusMode" 
+                onclick="app.toggleFocusMode()" 
+                class="w-7 h-7 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs border border-slate-200 transition flex items-center justify-center cursor-pointer shadow-2xs"
+                title="Tắt mắt mở tai"
+              >
+                <i class="fa-solid fa-eye-slash text-blue-600 text-xs"></i>
+              </button>
+
+              <button 
+                type="button" 
+                onclick="app.openSaveClipModal()" 
+                id="btnOpenSaveModal" 
+                class="h-7 px-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center gap-1 shadow-2xs transition active:scale-98 cursor-pointer"
+                title="Lưu đoạn clip"
+              >
+                <i class="fa-solid fa-floppy-disk text-xs"></i>
+                <span class="hidden sm:inline">Lưu</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Multi-Clip Navigation Row (Single horizontal scrollable row) -->
+          <div id="topBarVideoClipsRow" class="hidden pt-1 border-t border-slate-100 flex items-center justify-between gap-1.5 text-xs overflow-x-auto no-scrollbar">
+            <div id="topBarVideoClipsPills" class="flex items-center gap-1 flex-nowrap shrink-0">
+              <!-- Dynamically rendered pills -->
+            </div>
+
+            <button 
+              onclick="app.startNextClipInVideo()" 
+              id="btnTopBarCutNextClip" 
+              class="px-2 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 text-[11px] flex items-center gap-1 transition shadow-2xs cursor-pointer shrink-0 ml-auto whitespace-nowrap"
+              title="Cắt đoạn tiếp theo"
+            >
+              <i class="fa-solid fa-plus text-blue-600 text-[10px]"></i>
+              <span>Cắt tiếp</span>
+            </button>
+          </div>
+
+          <!-- Podcast Audio Player Card (Podcast Mode) -->
+          <div id="podcastPlayerCard" class="hidden rounded-2xl p-5 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 shadow-2xl space-y-4">
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b border-indigo-800/50 pb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 text-lg shadow-inner">
+                  <i class="fa-solid fa-podcast animate-pulse"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-sm text-white flex items-center gap-2">
+                    <span>Chế Độ Audio Podcast</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono border border-emerald-500/40">Siêu nhẹ 90%</span>
+                  </h4>
+                  <p class="text-xs text-slate-400">Luyện nghe thụ động mượt mà, tắt video tiết kiệm pin & 3G.</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <button 
+                  onclick="app.exportAudioClipMp3()" 
+                  class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-sm active:scale-95 cursor-pointer"
+                  title="Tải đoạn audio MP3 này về máy để nghe offline"
+                >
+                  <i class="fa-solid fa-download text-xs"></i>
+                  <span>Tải MP3</span>
+                </button>
+                <button 
+                  onclick="app.togglePodcastMode(false)" 
+                  class="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                  title="Quay lại chế độ Video"
+                >
+                  <i class="fa-solid fa-video text-xs"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Active Karaoke Subtitle Line -->
+            <div class="p-5 rounded-xl bg-slate-950/60 border border-indigo-500/20 text-center min-h-[90px] flex items-center justify-center shadow-inner">
+              <p id="podcastCurrentEnglishSentence" class="text-base sm:text-lg font-bold text-white leading-relaxed tracking-wide text-center">
+                "Select a sentence or play the clip..."
+              </p>
+            </div>
+
+            <!-- Audio Controls -->
+            <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
+              <div class="flex items-center gap-2">
+                <!-- Jump -5s -->
+                <button onclick="app.seekRelative(-5)" class="p-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                  <i class="fa-solid fa-rotate-left text-xs"></i>
+                  <span>-5s</span>
+                </button>
+
+                <!-- Big Play / Pause -->
+                <button 
+                  id="btnPodcastPlayPause" 
+                  onclick="app.togglePlayPause()" 
+                  class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm transition shadow-lg shadow-emerald-500/30 flex items-center gap-2 active:scale-95 cursor-pointer"
+                >
+                  <i class="fa-solid fa-play"></i>
+                  <span id="btnPodcastPlayPauseText">Phát Audio</span>
+                </button>
+
+                <!-- Jump +5s -->
+                <button onclick="app.seekRelative(5)" class="p-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer">
+                  <span>+5s</span>
+                  <i class="fa-solid fa-rotate-right text-xs"></i>
+                </button>
+              </div>
+
+              <!-- Speed & Loop -->
+              <div class="flex items-center gap-2">
+                <button 
+                  id="btnPodcastLoop" 
+                  onclick="app.toggleLooping()" 
+                  class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <i class="fa-solid fa-repeat text-xs"></i>
+                  <span id="btnPodcastLoopText">Lặp đoạn</span>
+                </button>
+
+                <select 
+                  id="podcastPlaybackRateSelect" 
+                  onchange="app.setPlaybackSpeed(parseFloat(this.value))" 
+                  class="bg-slate-800 text-slate-200 text-xs font-bold py-2 px-3 rounded-xl border border-slate-700 focus:outline-none cursor-pointer"
+                >
+                  <option value="0.75">0.75x (Chậm)</option>
+                  <option value="1.0" selected>1.0x (Chuẩn)</option>
+                  <option value="1.25">1.25x (Nhanh)</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Collapsible Video Player (Hidden by default, slides open when clicking Xem Video) -->
+          <div id="collapsibleVideoPlayerContainer" class="hidden rounded-xl overflow-hidden border border-slate-200 bg-black transition-all duration-300">
+            <div class="relative w-full aspect-video bg-black flex items-center justify-center max-h-[380px]">
+              <!-- Focus Blackout Overlay ("Tắt mắt mở tai") -->
+              <div id="audioFocusOverlay" class="absolute inset-0 z-20 audio-blackout-overlay hidden flex flex-col items-center justify-center text-center p-6 space-y-3">
+                <div class="flex items-center gap-1.5 h-14">
+                  <span class="w-1.5 h-8 bg-sky-400 rounded-full wave-bar"></span>
+                  <span class="w-1.5 h-12 bg-blue-500 rounded-full wave-bar"></span>
+                  <span class="w-1.5 h-6 bg-sky-300 rounded-full wave-bar"></span>
+                  <span class="w-1.5 h-14 bg-indigo-400 rounded-full wave-bar"></span>
+                  <span class="w-1.5 h-10 bg-sky-500 rounded-full wave-bar"></span>
+                </div>
+                <div>
+                  <h3 class="font-heading font-bold text-white text-sm">Chế độ "Tắt Mắt, Mở Tai"</h3>
+                  <p class="text-xs text-slate-300 max-w-xs mt-1">Đang phát âm thanh. Tập trung lắng nghe ngữ điệu.</p>
+                </div>
+                <button onclick="app.toggleFocusMode()" class="text-xs text-sky-400 hover:text-white underline">
+                  Mở lại màn hình video
+                </button>
+              </div>
+
+              <!-- YouTube IFrame Embed -->
+              <div id="playerPlaceholder" class="text-center p-6 space-y-3">
+                <i class="fa-brands fa-youtube text-5xl text-zinc-700"></i>
+                <p class="text-xs text-zinc-500">Video player will initialize once a URL is loaded.</p>
+              </div>
+              <div id="ytPlayerContainer" class="w-full h-full hidden">
+                <div id="ytPlayer"></div>
+              </div>
+            </div>
+
+            <!-- Video Metadata & Custom Playback Toolbar -->
+            <div class="p-2.5 sm:p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-2">
+              <div class="flex items-center gap-1">
+                <button onclick="app.seekRelative(-5)" title="Rewind 5s" class="p-1.5 sm:p-2 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-xs transition border border-slate-200">
+                  <i class="fa-solid fa-rotate-left"></i> 5s
+                </button>
+                <button id="btnPlayPause" onclick="app.togglePlayPause()" class="px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm">
+                  <i class="fa-solid fa-play"></i>
+                  <span>Play</span>
+                </button>
+                <button onclick="app.seekRelative(5)" title="Forward 5s" class="p-1.5 sm:p-2 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-xs transition border border-slate-200">
+                  5s <i class="fa-solid fa-rotate-right"></i>
+                </button>
+              </div>
+
+              <!-- Time display -->
+              <div class="text-xs font-mono text-slate-600">
+                <span id="currentTimeDisplay" class="text-blue-600 font-bold">00:00</span> / <span id="durationDisplay">00:00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fine-Tuning Sliders Accordion -->
+          <div id="clipRangeSlidersContainer" class="hidden space-y-2 pt-2 border-t border-slate-200 text-xs transition-all duration-200">
+            <div class="space-y-1">
+              <div class="flex justify-between text-slate-600">
+                <span>Start Time: <strong id="valStartTimeText" class="text-slate-900 font-mono">00:00.0</strong></span>
+                <div class="space-x-1">
+                  <button onclick="app.nudgeTime('start', -0.5)" class="px-1.5 py-0.5 bg-slate-100 rounded hover:bg-slate-200 text-slate-700 border border-slate-200">-0.5s</button>
+                  <button onclick="app.nudgeTime('start', 0.5)" class="px-1.5 py-0.5 bg-slate-100 rounded hover:bg-slate-200 text-slate-700 border border-slate-200">+0.5s</button>
+                </div>
+              </div>
+              <input type="range" id="sliderStartTime" min="0" max="100" step="0.1" value="0" oninput="app.onSliderChange('start', this.value)" class="w-full" />
+            </div>
+
+            <div class="space-y-1">
+              <div class="flex justify-between text-slate-600">
+                <span>End Time: <strong id="valEndTimeText" class="text-slate-900 font-mono">00:00.0</strong></span>
+                <div class="space-x-1">
+                  <button onclick="app.nudgeTime('end', -0.5)" class="px-1.5 py-0.5 bg-slate-100 rounded hover:bg-slate-200 text-slate-700 border border-slate-200">-0.5s</button>
+                  <button onclick="app.nudgeTime('end', 0.5)" class="px-1.5 py-0.5 bg-slate-100 rounded hover:bg-slate-200 text-slate-700 border border-slate-200">+0.5s</button>
+                </div>
+              </div>
+              <input type="range" id="sliderEndTime" min="0" max="100" step="0.1" value="0" oninput="app.onSliderChange('end', this.value)" class="w-full" />
+            </div>
+          </div>
+
+        </div>
+        
+        <!-- ============================================================= -->
+        <!-- TAB 1: TRIMMER VIEW (Full Transcript & Boundary Setters)      -->
+        <!-- ============================================================= -->
+        <div id="trimmerWorkspaceSection" class="glass-panel rounded-2xl border border-slate-200 flex flex-col min-h-[480px] max-h-[75vh] lg:h-[640px] shadow-xl overflow-hidden bg-white">
+          
+          <!-- Transcript Header Bar (Ultra-Slim Unified) -->
+          <div class="p-2.5 sm:p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+            <!-- Left: Title + Mode Toggle (Đoạn này / Toàn bài) -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="flex items-center gap-1.5">
+                <i class="fa-solid fa-scissors text-blue-600 text-xs"></i>
+                <h3 id="transcriptHeaderTitleText" class="font-heading font-bold text-xs sm:text-sm text-slate-900">Cắt Clip</h3>
+                <span id="sentenceCountBadge" class="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 font-bold font-mono">0 câu</span>
+                <span id="transcriptEditStatusBadge" class="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200 font-mono hidden">Bản gốc</span>
+              </div>
+
+              <!-- Display Mode Toggle: Clip Only vs Full Video -->
+              <div class="flex items-center bg-white p-0.5 rounded-lg border border-slate-200 text-xs shadow-2xs">
+                <button 
+                  id="btnTranscriptModeClipOnly" 
+                  onclick="app.setTranscriptDisplayMode('clip_only')" 
+                  class="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-bold text-[11px] flex items-center gap-1 transition cursor-pointer"
+                  title="Chỉ hiện các câu trong đoạn clip đã cắt"
+                >
+                  <span>Đoạn này</span>
+                  <span id="badgeClipOnlyCount" class="text-[10px] px-1 rounded-full bg-blue-100 text-blue-800 font-mono font-bold">0</span>
+                </button>
+                <button 
+                  id="btnTranscriptModeAll" 
+                  onclick="app.setTranscriptDisplayMode('all')" 
+                  class="px-2 py-0.5 rounded-md text-slate-600 hover:text-slate-900 font-semibold text-[11px] flex items-center gap-1 transition cursor-pointer"
+                  title="Hiện toàn bộ phụ đề của video gốc"
+                >
+                  <span>Toàn bài</span>
+                  <span id="badgeAllTranscriptCount" class="text-[10px] px-1 rounded-full bg-slate-100 text-slate-600 font-mono font-bold">0</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Right: Action Tools + Search + Auto 30s -->
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <button 
+                id="btnOpenFullSyncModal" 
+                onclick="app.openFullTranscriptSyncModal()" 
+                class="px-2 py-1 rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-2xs transition flex items-center gap-1 text-[11px] font-bold active:scale-95 cursor-pointer"
+                title="Đồng bộ phụ đề AI toàn bài (ChatGPT / Gemini)"
+              >
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-300 text-[10px]"></i>
+                <span class="hidden sm:inline">AI Sync</span>
+              </button>
+
+              <button 
+                id="btnSaveEditedTranscript" 
+                onclick="app.saveEditedTranscript()" 
+                class="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition flex items-center justify-center cursor-pointer active:scale-95 shadow-2xs"
+                title="Lưu bản sửa"
+              >
+                <i class="fa-solid fa-floppy-disk text-xs"></i>
+              </button>
+
+              <button 
+                id="btnRestoreOriginalTranscript" 
+                onclick="app.restoreOriginalTranscript()" 
+                class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 transition flex items-center justify-center cursor-pointer active:scale-95"
+                title="Khôi phục gốc"
+              >
+                <i class="fa-solid fa-rotate-left text-xs"></i>
+              </button>
+
+              <div class="relative w-24 sm:w-32">
+                <input 
+                  type="text" 
+                  id="transcriptSearchInput" 
+                  oninput="app.filterTranscript(this.value)" 
+                  placeholder="Tìm..." 
+                  class="w-full pl-6 pr-2 py-0.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 h-7"
+                />
+                <i class="fa-solid fa-magnifying-glass absolute left-2 top-2 text-[10px] text-slate-400"></i>
+              </div>
+
+              <button 
+                onclick="app.autoSelectFirstChunk()" 
+                class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-blue-700 font-bold text-[11px] border border-slate-200 transition cursor-pointer shadow-2xs whitespace-nowrap"
+                title="Tự động chọn 30 giây đầu tiên"
+              >
+                ⚡ Auto 30s
+              </button>
+            </div>
+          </div>
+
+          <!-- Transcript Scrollable Body -->
+          <div id="transcriptContainer" class="flex-1 overflow-y-auto p-3 space-y-2 divide-y divide-slate-100 bg-white">
+            
+            <!-- Empty state -->
+            <div id="transcriptEmptyState" class="h-full flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-200">
+                <i class="fa-solid fa-closed-captioning text-2xl"></i>
+              </div>
+              <div class="max-w-sm">
+                <p class="font-bold text-slate-700 text-sm">No Transcript Loaded</p>
+                <p class="text-xs text-slate-500 mt-1">Paste a YouTube link above or choose a sample video to extract deduplicated English sentences.</p>
+              </div>
+            </div>
+
+            <!-- Loading Skeleton (hidden by default) -->
+            <div id="transcriptSkeleton" class="hidden p-4 space-y-3">
+              <div class="h-14 skeleton rounded-xl"></div>
+              <div class="h-14 skeleton rounded-xl"></div>
+              <div class="h-14 skeleton rounded-xl"></div>
+              <div class="h-14 skeleton rounded-xl"></div>
+              <div class="h-14 skeleton rounded-xl"></div>
+            </div>
+
+            <!-- Transcript Row List (rendered dynamically) -->
+            <div id="transcriptList" class="space-y-1.5"></div>
+
+          </div>
+
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- TAB 2: LISTEN VIEW (A-B Loop, Speed Controls & Subtitles)     -->
+        <!-- ============================================================= -->
+        <div id="listenWorkspaceSection" class="hidden glass-panel rounded-2xl border border-slate-200 flex flex-col min-h-[480px] max-h-[75vh] lg:h-[640px] shadow-2xl overflow-hidden bg-white">
+          
+          <!-- Header Bar -->
+          <div class="p-2.5 sm:p-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 flex-wrap min-w-0">
+              <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200 shrink-0">
+                <i class="fa-solid fa-headphones text-xs"></i>
+              </div>
+              <h3 class="font-heading font-bold text-xs sm:text-sm text-slate-900 truncate">Luyện Nghe</h3>
+              <span id="listenClipSentenceCount" class="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 font-mono border border-slate-200 shrink-0">0 câu</span>
+              
+              <!-- 10x Replay Goal Badge -->
+              <span id="listenReplayCountBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-mono font-bold border border-blue-200 flex items-center gap-1 shadow-2xs shrink-0" title="Số lần đã nghe đoạn clip này">
+                <i class="fa-solid fa-rotate-left text-blue-600 text-[9px]"></i>
+                <span>Đã nghe: <strong id="listenReplayCountNum">0</strong>/10</span>
+              </span>
+            </div>
+            
+            <div class="flex items-center gap-2 shrink-0">
+              <button 
+                onclick="app.onUserClickCompleteListenMode()" 
+                id="btnCompleteListenMode" 
+                class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 font-bold text-xs transition flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95"
+                title="Cần nghe lặp lại đủ 10 lần để hoàn thành đoạn clip"
+              >
+                <i id="iconCompleteListenMode" class="fa-solid fa-lock text-slate-400 text-xs"></i>
+                <span id="textCompleteListenMode">0/10 lần</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Row 1: Integrated Mini Player (Replay, Play, Scrubber, Time, Speed) -->
+          <div class="p-2 sm:p-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button 
+                onclick="app.listenReplayFromStart()" 
+                class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200 transition flex items-center gap-1 shadow-2xs cursor-pointer"
+                title="Phát lại từ đầu đoạn clip (A)"
+              >
+                <i class="fa-solid fa-rotate-left text-blue-600 text-[10px]"></i>
+                <span>Replay</span>
+              </button>
+              
+              <button 
+                id="btnListenPlayPause" 
+                onclick="app.listenTogglePlay()" 
+                class="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer"
+              >
+                <i class="fa-solid fa-play text-[10px]"></i>
+                <span id="btnListenPlayPauseText">Play</span>
+              </button>
+            </div>
+
+            <!-- Scrubber & Time Display -->
+            <div class="flex items-center gap-2 flex-1 min-w-[150px] max-w-sm px-1">
+              <input 
+                type="range" 
+                id="sliderClipProgress" 
+                min="0" 
+                max="100" 
+                step="0.1" 
+                value="0" 
+                oninput="app.onClipScrubberChange(this.value)" 
+                class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+              <span class="text-[11px] font-mono text-slate-600 shrink-0 font-bold">
+                <span id="listenCurrentClipTime" class="text-blue-600">00:00.0</span> / <span id="listenTotalClipTime">00:00.0</span>
+              </span>
+            </div>
+
+            <!-- Speed Pills -->
+            <div class="flex items-center gap-0.5 bg-white p-0.5 rounded-lg border border-slate-200 text-xs shrink-0 shadow-2xs">
+              <button onclick="app.setPlaybackSpeed(0.75)" class="speed-pill px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-slate-600 hover:text-slate-900 cursor-pointer" data-speed="0.75">0.75x</button>
+              <button onclick="app.setPlaybackSpeed(1.0)" class="speed-pill active px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-50 text-blue-700 border border-blue-200 cursor-pointer" data-speed="1.0">1.0x</button>
+              <button onclick="app.setPlaybackSpeed(1.25)" class="speed-pill px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-slate-600 hover:text-slate-900 cursor-pointer" data-speed="1.25">1.25x</button>
+            </div>
+          </div>
+
+          <!-- Row 2: Subtitle Masking Modes & Step 4 Audio Offset -->
+          <div class="px-2.5 sm:px-3 py-1.5 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <!-- 3 Masking Modes (Pill Segmented Control) -->
+            <div class="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs shrink-0">
+              <button 
+                onclick="app.setSubtitleMaskMode('reveal')" 
+                id="btnSubModeReveal" 
+                class="px-2 py-0.5 rounded-md bg-white text-blue-700 font-bold shadow-2xs flex items-center gap-1 transition text-[11px] cursor-pointer"
+                title="Hiện đầy đủ phụ đề"
+              >
+                <i class="fa-solid fa-eye text-[10px]"></i>
+                <span>Hiện đầy đủ</span>
+              </button>
+              <button 
+                onclick="app.setSubtitleMaskMode('blur')" 
+                id="btnSubModeBlur" 
+                class="px-2 py-0.5 rounded-md text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1 transition text-[11px] cursor-pointer"
+                title="Làm mờ phụ đề - Di chuột/chạm để hé mở"
+              >
+                <i class="fa-solid fa-wand-magic text-[10px]"></i>
+                <span>Làm mờ</span>
+              </button>
+              <button 
+                onclick="app.setSubtitleMaskMode('hidden')" 
+                id="btnSubModeHidden" 
+                class="px-2 py-0.5 rounded-md text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1 transition text-[11px] cursor-pointer"
+                title="Khóa ẩn 100% để luyện tai nghe sâu"
+              >
+                <i class="fa-solid fa-eye-slash text-[10px]"></i>
+                <span>Khóa ẩn</span>
+              </button>
+            </div>
+
+            <!-- Step 4 Exclusive Audio Duration Trim Controls (0.2s & 0.5s) -->
+            <div class="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-xl border border-slate-200 text-xs shrink-0" title="Cắt ngắn hoặc nối dài thời lượng đoạn audio (Chỉ áp dụng cho Bước 4)">
+              <span class="text-[10px] text-slate-500 font-bold flex items-center gap-1">
+                <i class="fa-solid fa-scissors text-blue-600"></i>
+                <span class="hidden sm:inline">Cắt/Nối:</span>
+              </span>
+              <button onclick="app.adjustListenAudioDurationTrim(-0.5)" class="px-1.5 py-0.5 rounded-md bg-white hover:bg-slate-200 text-slate-700 text-[10px] font-bold border border-slate-200 shadow-2xs cursor-pointer active:scale-95" title="Cắt ngắn 0.5 giây">-0.5s</button>
+              <button onclick="app.adjustListenAudioDurationTrim(-0.2)" class="px-1.5 py-0.5 rounded-md bg-white hover:bg-slate-200 text-slate-700 text-[10px] font-bold border border-slate-200 shadow-2xs cursor-pointer active:scale-95" title="Cắt ngắn 0.2 giây">-0.2s</button>
+              <button onclick="app.resetListenAudioDurationTrim()" id="btnListenAudioOffsetDisplay" class="px-2 py-0.5 rounded-md bg-white text-blue-700 font-mono font-bold text-[11px] border border-blue-200 shadow-2xs cursor-pointer" title="Bấm để đặt lại về thời lượng gốc 0.0s">0.0s</button>
+              <button onclick="app.adjustListenAudioDurationTrim(0.2)" class="px-1.5 py-0.5 rounded-md bg-white hover:bg-slate-200 text-slate-700 text-[10px] font-bold border border-slate-200 shadow-2xs cursor-pointer active:scale-95" title="Nối dài 0.2 giây">+0.2s</button>
+              <button onclick="app.adjustListenAudioDurationTrim(0.5)" class="px-1.5 py-0.5 rounded-md bg-white hover:bg-slate-200 text-slate-700 text-[10px] font-bold border border-slate-200 shadow-2xs cursor-pointer active:scale-95" title="Nối dài 0.5 giây">+0.5s</button>
+            </div>
+          </div>
+
+          <!-- Sentences List Body -->
+          <div id="listenSentenceList" class="flex-1 overflow-y-auto p-3 space-y-2 bg-white">
+            <!-- Rendered dynamically -->
+          </div>
+
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- TAB 3: VẠCH LÁ TÌM SÂU (PHASE 3 - LEXICAL CHUNKING & IPA)     -->
+        <!-- ============================================================= -->
+        <div id="vachLaWorkspaceSection" class="hidden glass-panel rounded-2xl border border-slate-200 flex flex-col min-h-[480px] max-h-[75vh] lg:h-[640px] shadow-2xl overflow-hidden bg-white">
+          
+          <!-- Header Bar -->
+          <div class="p-3 sm:p-3.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200">
+                <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+              </div>
+              <h3 class="font-heading font-bold text-sm text-slate-900">Vạch Lá Tìm Sâu</h3>
+            </div>
+
+            <!-- Action buttons: Custom Words Lookup, Whole Clip AI Analysis & Complete Step 2 -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <!-- Button 2: Custom Words Lookup & Collocation Advice -->
+              <button 
+                onclick="app.openCustomWordsModal()" 
+                id="btnOpenCustomWordsModal" 
+                class="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs shadow-xs transition flex items-center gap-1 active:scale-95 cursor-pointer"
+                title="Tra cứu từ còn sót/chưa hiểu và nhận lời khuyên đi cụm từ từ Gemini"
+              >
+                <i class="fa-solid fa-plus-circle text-amber-600 text-xs"></i>
+                <span>➕ Tra từ</span>
+              </button>
+
+              <!-- Button 1: Whole Clip AI Analysis -->
+              <button 
+                onclick="app.openVachLaAiSyncModal()" 
+                id="btnOpenVachLaAiSyncModal" 
+                class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1 active:scale-95 cursor-pointer"
+                title="Sao chép Prompt để nhờ ChatGPT / Gemini phân tích toàn bộ các câu trong đoạn clip"
+              >
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-300 text-xs"></i>
+                <span>💡 Phân Tích AI</span>
+              </button>
+
+              <!-- Complete Step 2 Button -->
+              <button 
+                onclick="app.completeVachLaMode()" 
+                id="btnCompleteVachLaMode" 
+                class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
+              >
+                <i class="fa-solid fa-circle-check text-blue-400 text-xs"></i>
+                <span>Hoàn thành</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Mini Audio Player Bar for Step 2 (Vạch lá tìm sâu - Pure Replay & Play) -->
+          <div class="px-4 py-2 bg-blue-50/70 border-b border-blue-200 flex items-center gap-2 text-xs shrink-0">
+            <button 
+              onclick="app.listenReplayFromStart()" 
+              class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-semibold border border-slate-200 text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95"
+              title="Phát lại từ đầu đoạn clip"
+            >
+              <i class="fa-solid fa-rotate-left text-blue-600 text-xs"></i>
+              <span>Replay</span>
+            </button>
+            <button 
+              onclick="app.listenTogglePlay()" 
+              id="btnVachLaAudioPlayPause"
+              class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
+              title="Phát / Tạm dừng đoạn clip"
+            >
+              <i class="fa-solid fa-play"></i>
+              <span id="btnVachLaAudioPlayPauseText">Play</span>
+            </button>
+          </div>
+
+          <!-- Main Scrollable Analysis Area -->
+          <div id="vachLaScrollContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
+            
+            <!-- Empty State (Prompt user to analyze) -->
+            <div id="vachLaEmptyState" class="h-full flex flex-col items-center justify-center p-8 text-center space-y-4">
+              <div class="w-16 h-16 rounded-3xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 text-2xl shadow-sm">
+                <i class="fa-solid fa-brain"></i>
+              </div>
+              <div class="max-w-md space-y-2">
+                <h4 class="font-heading font-bold text-base text-slate-900">Sẵn sàng phân tích ngữ cảnh chuyên sâu</h4>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                  Nhờ ChatGPT / Gemini phân tích toàn bộ câu tiếng Anh trong đoạn clip bạn vừa cắt, cung cấp phiên âm IPA chuẩn xác, bản dịch tự nhiên và bóc tách các cụm từ (Collocations / Phrasal Verbs) cốt lõi.
+                </p>
+              </div>
+              <button 
+                onclick="app.openVachLaAiSyncModal()" 
+                class="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl text-sm transition shadow-lg shadow-blue-500/20 flex items-center gap-2 active:scale-95 cursor-pointer"
+              >
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+                <span>💡 Nhờ AI Phân Tích Đoạn Này (ChatGPT/Gemini)</span>
+              </button>
+            </div>
+
+            <!-- Loading Skeleton -->
+            <div id="vachLaLoadingState" class="hidden h-full flex flex-col items-center justify-center p-8 text-center space-y-4">
+              <div class="relative w-16 h-16 flex items-center justify-center">
+                <div class="w-16 h-16 rounded-full border-4 border-blue-100 border-t-blue-600 animate-spin"></div>
+                <i class="fa-solid fa-sparkles text-blue-600 text-xl absolute"></i>
+              </div>
+              <div class="space-y-1">
+                <h4 class="font-bold text-slate-900 text-sm">Gemini AI đang phân tích sâu đoạn clip...</h4>
+                <p class="text-xs text-slate-500">Đang ghép câu hoàn chỉnh, tạo phiên âm IPA và trích xuất các lexical chunks then chốt.</p>
+              </div>
+              <div class="w-full max-w-sm space-y-2 pt-2">
+                <div class="h-10 skeleton rounded-xl"></div>
+                <div class="h-24 skeleton rounded-xl"></div>
+              </div>
+            </div>
+
+            <!-- Results Card Container (Rendered dynamically) -->
+            <div id="vachLaResultsList" class="space-y-4 hidden"></div>
+
+          </div>
+
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- TAB 4: TAM SAO THẤT BẢN (PHASE 4 - YOUGLISH DISCOVERY)        -->
+        <!-- ============================================================= -->
+        <div id="tamSaoWorkspaceSection" class="hidden glass-panel rounded-2xl border border-slate-200 flex flex-col min-h-[480px] max-h-[75vh] lg:h-[640px] shadow-2xl overflow-hidden bg-white">
+          
+          <!-- Header Bar -->
+          <div class="p-3 sm:p-3.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200">
+                <i class="fa-solid fa-earth-americas text-sm"></i>
+              </div>
+              <h3 class="font-heading font-bold text-sm text-slate-900">Tam Sao Thất Bản</h3>
+            </div>
+
+            <!-- Accent Filter Pills & Complete Step 3 Button -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 text-xs shadow-xs">
+                <button 
+                  id="btnAccentAll" 
+                  onclick="app.setAccentFilter('english')" 
+                  class="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 font-bold transition text-xs flex items-center gap-1 cursor-pointer"
+                >
+                  <span>🌐 Tất cả</span>
+                </button>
+                <button 
+                  id="btnAccentUS" 
+                  onclick="app.setAccentFilter('us')" 
+                  class="px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition text-xs flex items-center gap-1 cursor-pointer"
+                >
+                  <span>🇺🇸 US</span>
+                </button>
+                <button 
+                  id="btnAccentUK" 
+                  onclick="app.setAccentFilter('uk')" 
+                  class="px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition text-xs flex items-center gap-1 cursor-pointer"
+                >
+                  <span>🇬🇧 UK</span>
+                </button>
+                <button 
+                  id="btnAccentAUS" 
+                  onclick="app.setAccentFilter('aus')" 
+                  class="px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition text-xs flex items-center gap-1 cursor-pointer"
+                >
+                  <span>🇦🇺 AUS</span>
+                </button>
+              </div>
+
+              <!-- Complete Step 3 Button -->
+              <button 
+                onclick="app.completeTamSaoMode()" 
+                id="btnCompleteTamSaoMode" 
+                class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
+              >
+                <i class="fa-solid fa-circle-check text-blue-400 text-xs"></i>
+                <span>Hoàn thành</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Mini Audio Player Bar for Step 3 (Tam sao thất bản - Pure Replay & Play) -->
+          <div class="px-4 py-2 bg-blue-50/70 border-b border-blue-200 flex items-center gap-2 text-xs shrink-0">
+            <button 
+              onclick="app.listenReplayFromStart()" 
+              class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-semibold border border-slate-200 text-xs flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95"
+              title="Phát lại từ đầu đoạn clip"
+            >
+              <i class="fa-solid fa-rotate-left text-blue-600 text-xs"></i>
+              <span>Replay</span>
+            </button>
+            <button 
+              onclick="app.listenTogglePlay()" 
+              id="btnTamSaoAudioPlayPause"
+              class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
+              title="Phát / Tạm dừng đoạn clip"
+            >
+              <i class="fa-solid fa-play"></i>
+              <span id="btnTamSaoAudioPlayPauseText">Play</span>
+            </button>
+          </div>
+
+          <!-- Main Scrollable Area -->
+          <div id="tamSaoScrollContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
+            
+            <!-- Quick Search Bar -->
+            <div class="glass-card p-3 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-2">
+              <label class="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5">
+                <i class="fa-solid fa-magnifying-glass text-blue-600"></i>
+                <span>Tra cứu phát âm tự do trên YouGlish:</span>
+              </label>
+              <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                  <input 
+                    type="text" 
+                    id="tamSaoCustomSearchInput" 
+                    placeholder="Nhập từ hoặc cụm từ bất kỳ (ví dụ: practice and develop, connecting the dots...)" 
+                    class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-1 focus:ring-blue-500 transition"
+                    onkeydown="if(event.key === 'Enter') app.searchCustomYouGlish()"
+                  />
+                  <button 
+                    onclick="document.getElementById('tamSaoCustomSearchInput').value = ''" 
+                    class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs"
+                    title="Xóa tìm kiếm"
+                  >
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+                <button 
+                  onclick="app.searchCustomYouGlish()" 
+                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center gap-1.5 shrink-0"
+                >
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                  <span>Xem trên YouGlish</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Active Clip Phrase Suggestions Section -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                  <i class="fa-solid fa-lightbulb text-blue-600"></i>
+                  <span>Cụm từ then chốt từ đoạn clip đang luyện tập:</span>
+                </h4>
+                <span id="tamSaoClipPhraseCount" class="text-[11px] font-mono text-blue-600 font-bold">0 cụm từ</span>
+              </div>
+
+              <!-- Phrases Grid Container (rendered dynamically) -->
+              <div id="tamSaoPhrasesList" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- TAB 5: SHADOWING (PHASE 5 - VOICE RECORDING & AI FEEDBACK)    -->
+        <!-- ============================================================= -->
+        <div id="shadowingWorkspaceSection" class="hidden glass-panel rounded-2xl border border-slate-200 flex flex-col min-h-[480px] max-h-[75vh] lg:h-[640px] shadow-2xl overflow-hidden bg-white">
+          
+          <!-- Header Bar -->
+          <div class="p-3 sm:p-3.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-200">
+                <i class="fa-solid fa-microphone-lines text-sm"></i>
+              </div>
+              <h3 class="font-heading font-bold text-sm text-slate-900">Luyện Shadowing</h3>
+            </div>
+
+            <!-- Active Clip Badge & Complete Step 5 Button -->
+            <div class="flex items-center gap-2 text-xs">
+              <span id="shadowingClipBadge" class="px-2.5 py-1 rounded-xl bg-white text-slate-800 border border-slate-200 font-mono text-[11px] shadow-xs">
+                <i class="fa-solid fa-scissors text-blue-600 mr-1"></i>
+                <span>Clip: 00:00.0 → 00:00.0</span>
+              </span>
+
+              <button 
+                onclick="app.completeShadowingMode()" 
+                id="btnCompleteShadowingMode" 
+                class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
+              >
+                <i class="fa-solid fa-circle-check text-blue-400 text-xs"></i>
+                <span>Hoàn thành</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Scrollable Area -->
+          <div id="shadowingScrollContainer" class="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
+            
+            <!-- Sentence Stepper Navigation Bar -->
+            <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
+              <button 
+                onclick="app.prevShadowingSentence()" 
+                id="btnShadowingPrev" 
+                class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 font-semibold flex items-center gap-1.5 transition disabled:opacity-40 disabled:cursor-not-allowed border border-slate-200 shadow-xs"
+              >
+                <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                <span>Câu trước</span>
+              </button>
+
+              <div class="flex items-center gap-2">
+                <span id="shadowingSentenceStepBadge" class="font-bold text-blue-600 font-mono text-xs">Câu 1 / 1</span>
+                <span id="shadowingSentenceTimestamp" class="text-slate-400 font-mono text-[11px]">00:00.0 - 00:00.0</span>
+              </div>
+
+              <button 
+                onclick="app.nextShadowingSentence()" 
+                id="btnShadowingNext" 
+                class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 font-semibold flex items-center gap-1.5 transition disabled:opacity-40 disabled:cursor-not-allowed border border-slate-200 shadow-xs"
+              >
+                <span>Câu sau</span>
+                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+              </button>
+            </div>
+
+            <!-- Target Reference Sentence Card -->
+            <div class="glass-card p-4 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-3">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-2 text-xs">
+                <span class="text-slate-500 font-medium flex items-center gap-1.5">
+                  <i class="fa-solid fa-bullseye text-indigo-600"></i>
+                  <span>Câu mẫu mục tiêu (Reference):</span>
+                </span>
+
+                <div class="flex items-center gap-2">
+                  <button 
+                    onclick="app.playShadowingNativeAudio()" 
+                    title="Nghe phát âm chuẩn của người bản xứ" 
+                    class="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold flex items-center gap-1.5 transition"
+                  >
+                    <i class="fa-solid fa-volume-high text-blue-600"></i>
+                    <span>Nghe mẫu</span>
+                  </button>
+                  <button 
+                    onclick="app.playShadowingVideoMoment()" 
+                    title="Xem video tại thời điểm này" 
+                    class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs flex items-center gap-1 transition border border-slate-200 font-medium"
+                  >
+                    <i class="fa-solid fa-play text-blue-600 text-[10px]"></i>
+                    <span>Xem video</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- English Sentence -->
+              <p id="shadowingTargetEnglish" class="text-base font-bold text-slate-900 leading-relaxed tracking-wide">Loading sentence...</p>
+
+              <!-- Vietnamese Translation -->
+              <div class="bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed flex items-start gap-2">
+                <i class="fa-solid fa-language text-blue-600 text-sm mt-0.5 shrink-0"></i>
+                <p id="shadowingTargetVietnamese" class="font-normal">Loading translation...</p>
+              </div>
+
+              <!-- IPA Bar -->
+              <div class="flex items-center justify-between bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-mono text-blue-700">
+                <div class="flex items-center gap-2 truncate">
+                  <span class="text-slate-400 text-[10px] uppercase font-sans">IPA:</span>
+                  <span id="shadowingTargetIPA" class="tracking-wide select-all font-semibold">/.../</span>
+                </div>
+                <button onclick="app.copyText(document.getElementById('shadowingTargetIPA').textContent)" class="text-slate-400 hover:text-slate-700 text-[10px]" title="Copy IPA">
+                  <i class="fa-regular fa-copy"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Voice Recording Interactive Box -->
+            <div class="glass-card p-5 rounded-2xl border border-slate-200 bg-white shadow-xl flex flex-col items-center justify-center text-center space-y-4 relative overflow-hidden">
+              
+              <!-- Circular Record Button with Glow Animation -->
+              <div class="relative flex items-center justify-center">
+                <button 
+                  id="btnToggleShadowingRecord" 
+                  onclick="app.toggleShadowingRecord()" 
+                  class="w-18 h-18 w-[72px] h-[72px] rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white flex items-center justify-center text-2xl shadow-xl shadow-blue-500/20 transition-all duration-300 active:scale-90"
+                  title="Nhấp để bắt đầu hoặc dừng thu âm giọng đọc của bạn"
+                >
+                  <i id="shadowingRecordIcon" class="fa-solid fa-microphone"></i>
+                </button>
+
+                <!-- Recording ripple effect (hidden by default) -->
+                <div id="shadowingRecordRipple" class="hidden absolute -inset-3 rounded-full border-2 border-blue-500/50 animate-ping pointer-events-none"></div>
+              </div>
+
+              <!-- Recording Status & Timer -->
+              <div class="space-y-1">
+                <h5 id="shadowingRecordStatusText" class="text-xs font-bold text-slate-900 tracking-wide">Sẵn sàng thu âm giọng nói</h5>
+                <p id="shadowingRecordTimer" class="text-[11px] font-mono text-slate-500">00:00 / 00:30</p>
+              </div>
+
+              <!-- Audio Level Visualizer Wave (Animated when recording) -->
+              <div id="shadowingWaveformVisualizer" class="hidden flex items-center justify-center gap-1 h-6">
+                <div class="w-1 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                <div class="w-1 h-4 bg-blue-600 rounded-full animate-bounce [animation-delay:0.1s]"></div>
+                <div class="w-1 h-6 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                <div class="w-1 h-3 bg-blue-400 rounded-full animate-bounce [animation-delay:0.3s]"></div>
+                <div class="w-1 h-5 bg-sky-500 rounded-full animate-bounce [animation-delay:0.15s]"></div>
+              </div>
+
+              <!-- Live Speech-to-Text Recognition Display -->
+              <div id="shadowingLiveSpeechBox" class="w-full max-w-lg bg-slate-50 p-3 rounded-xl border border-slate-200 text-left space-y-1 text-xs">
+                <div class="flex items-center justify-between text-[10px] text-slate-500 uppercase tracking-wider font-bold">
+                  <span class="flex items-center gap-1">
+                    <i class="fa-solid fa-ear-listen text-blue-600"></i>
+                    <span>Trình nhận diện giọng nói:</span>
+                  </span>
+                  <span id="shadowingSpeechEngineBadge" class="text-blue-600 font-mono">Web Speech API</span>
+                </div>
+                <p id="shadowingLiveSpeechText" class="text-slate-700 italic text-xs min-h-[20px]">
+                  (Bấm nút micro ở trên và nói to rõ câu tiếng Anh mẫu...)
+                </p>
+              </div>
+
+              <!-- Recorded Voice Audio Playback Player (appears after recording) -->
+              <div id="shadowingPlaybackContainer" class="hidden w-full max-w-lg flex items-center justify-between gap-3 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                <div class="flex items-center gap-2 text-xs text-slate-700 font-semibold">
+                  <i class="fa-solid fa-play text-blue-600"></i>
+                  <span>Bản thu âm của bạn:</span>
+                </div>
+                <audio id="shadowingRecordedAudioPlayer" controls class="h-8 max-w-[280px]"></audio>
+              </div>
+
+              <!-- Trigger AI Evaluation Button -->
+              <button 
+                id="btnAnalyzeShadowingAI" 
+                onclick="app.evaluateShadowingPerformance()" 
+                class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center gap-2 active:scale-95 disabled:opacity-50"
+              >
+                <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i>
+                <span>Chấm điểm & Nhận xét phát âm bằng AI</span>
+              </button>
+
+            </div>
+
+            <!-- AI Evaluation Results Dashboard (Rendered dynamically) -->
+            <div id="shadowingEvaluationResults" class="hidden space-y-4"></div>
+
+          </div>
+
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- TAB 6: SMART VOCABULARY & 3D FLASHCARDS (Phase 6)             -->
+        <!-- ============================================================= -->
+        <div id="tuVungWorkspaceSection" class="hidden glass-panel rounded-2xl border border-slate-200 flex flex-col min-h-[480px] max-h-[75vh] lg:h-[640px] shadow-xl overflow-hidden bg-white">
+          
+          <!-- Header Bar -->
+          <div class="px-3 sm:px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs border border-blue-200 shrink-0">
+                <i class="fa-solid fa-layer-group"></i>
+              </div>
+              <h3 class="font-heading font-bold text-sm text-slate-900 flex items-center gap-1.5 flex-wrap">
+                <span>Sổ Từ Vựng</span>
+                <span id="vocabTotalCountBadge" class="text-[10px] px-1.5 py-0.2 rounded-full bg-white text-blue-700 font-mono font-bold border border-blue-200 shadow-2xs">0 thẻ</span>
+                <span id="flashcardSrsDueSummaryBadge" class="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-50 text-rose-700 font-mono font-bold border border-rose-200">0 cần ôn</span>
+              </h3>
+            </div>
+
+            <!-- View Switcher & Action Buttons -->
+            <div class="flex items-center gap-1.5 sm:gap-2">
+              <div class="flex items-center bg-slate-200/70 p-0.5 rounded-lg text-xs">
+                <button 
+                  id="btnVocabModeFlashcard" 
+                  onclick="app.switchVocabViewMode('flashcard')" 
+                  class="px-2.5 py-1 rounded-md bg-white text-blue-700 font-bold transition text-[11px] flex items-center gap-1 shadow-2xs cursor-pointer"
+                >
+                  <i class="fa-solid fa-clone text-[10px]"></i>
+                  <span>Lật thẻ 3D</span>
+                </button>
+                <button 
+                  id="btnVocabModeList" 
+                  onclick="app.switchVocabViewMode('list')" 
+                  class="px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900 font-medium transition text-[11px] flex items-center gap-1 cursor-pointer"
+                >
+                  <i class="fa-solid fa-list-ul text-[10px]"></i>
+                  <span>Danh sách</span>
+                </button>
+              </div>
+
+              <button 
+                onclick="app.openAddVocabModal()" 
+                class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold transition flex items-center gap-1 shadow-xs cursor-pointer"
+                title="Thêm từ mới thủ công"
+              >
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                <span>Thêm từ</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Streamlined Single-Row Toolbar -->
+          <div class="px-3 sm:px-4 py-2 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <!-- Left: Scope Selector & Deck Filter -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <!-- Scope: Video vs Global -->
+              <div class="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs shrink-0">
+                <button 
+                  id="btnVocabScopeCurrentVideo" 
+                  onclick="app.setVocabScope('current_video')" 
+                  class="px-2.5 py-0.5 rounded-md bg-white text-blue-700 font-bold shadow-2xs text-[11px] flex items-center gap-1 cursor-pointer"
+                >
+                  <i class="fa-solid fa-film text-[10px]"></i>
+                  <span id="btnVocabScopeCurrentVideoText">Video này (<span id="btnVocabScopeCurrentVideoCount">0</span>)</span>
+                </button>
+                <button 
+                  id="btnVocabScopeGlobal" 
+                  onclick="app.setVocabScope('global')" 
+                  class="px-2.5 py-0.5 rounded-md text-slate-600 hover:text-slate-900 font-medium text-[11px] flex items-center gap-1 cursor-pointer"
+                >
+                  <i class="fa-solid fa-vault text-[10px] text-amber-500"></i>
+                  <span id="btnVocabScopeGlobalText">Kho Tổng (<span id="btnVocabScopeGlobalCount">0</span>)</span>
+                </button>
+              </div>
+
+              <!-- Deck Filter: Cần ôn (Due) vs Tất cả -->
+              <div id="flashcardFilterDeckControls" class="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs shrink-0">
+                <button onclick="app.setFlashcardDeckFilter('due_today')" id="btnDeckFilterDueToday" class="px-2.5 py-0.5 rounded-md bg-white text-rose-700 font-bold shadow-2xs text-[11px] flex items-center gap-1 cursor-pointer">
+                  <i class="fa-solid fa-fire text-amber-500 text-[10px]"></i>
+                  <span>Cần ôn (<span id="fcDueTodayCountBadge">0</span>)</span>
+                </button>
+                <button onclick="app.setFlashcardDeckFilter('all')" id="btnDeckFilterAll" class="px-2.5 py-0.5 rounded-md text-slate-600 hover:text-slate-900 font-medium text-[11px] cursor-pointer">
+                  <span>Tất cả (<span id="fcAllCountBadge">0</span>)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Right: Deck Navigation & Card Stepper -->
+            <div id="flashcardNavControls" class="flex items-center gap-1 self-end sm:self-center shrink-0">
+              <span id="flashcardStepperText" class="font-mono text-slate-800 font-bold text-xs bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">1 / 1</span>
+              <button onclick="app.shuffleFlashcards()" title="Đảo ngẫu nhiên thứ tự thẻ" class="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition flex items-center justify-center cursor-pointer">
+                <i class="fa-solid fa-shuffle text-[11px]"></i>
+              </button>
+              <button onclick="app.prevFlashcard()" title="Thẻ trước (Phím ←)" class="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-700 hover:text-slate-900 transition flex items-center justify-center cursor-pointer">
+                <i class="fa-solid fa-chevron-left text-[11px]"></i>
+              </button>
+              <button onclick="app.nextFlashcard()" title="Thẻ tiếp theo (Phím →)" class="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-700 hover:text-slate-900 transition flex items-center justify-center cursor-pointer">
+                <i class="fa-solid fa-chevron-right text-[11px]"></i>
+              </button>
+              <button onclick="app.deleteCurrentFlashcard()" title="Xóa thẻ từ vựng này" class="w-6 h-6 rounded-md hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition flex items-center justify-center cursor-pointer">
+                <i class="fa-regular fa-trash-can text-[11px]"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Content Body -->
+          <div class="flex-1 p-3 sm:p-4 overflow-y-auto bg-slate-50/50 flex flex-col justify-between">
+            
+            <!-- VIEW 1: 3D FLASHCARD INTERACTIVE PLAYER -->
+            <div id="vocabFlashcardPlayerContainer" class="flex-1 flex flex-col justify-between max-w-xl mx-auto w-full space-y-3">
+
+              <!-- VICTORY COMPLETION STATE (Displayed when all due cards are done) -->
+              <div id="flashcardVictoryContainer" class="hidden h-60 sm:h-64 w-full max-w-xl mx-auto bg-gradient-to-b from-white to-amber-50/50 rounded-2xl border-2 border-amber-200/80 p-5 sm:p-6 flex flex-col items-center justify-center text-center shadow-lg space-y-3">
+                <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center text-2xl shadow-inner">
+                  <i class="fa-solid fa-trophy text-amber-500"></i>
+                </div>
+                <div class="space-y-1">
+                  <h3 class="font-heading font-extrabold text-base sm:text-lg text-slate-900">
+                    Xuất sắc! Hoàn thành ôn tập hôm nay!
+                  </h3>
+                  <p class="text-xs text-slate-600 max-w-sm">
+                    Tất cả từ vựng đã được lên lịch ngắt quãng (SRS) tối ưu. Bạn có thể nghỉ ngơi hoặc ôn lại tự do.
+                  </p>
+                </div>
+                <div class="flex items-center gap-2 pt-1 flex-wrap justify-center">
+                  <button 
+                    onclick="app.setFlashcardDeckFilter('all')" 
+                    class="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+                  >
+                    <i class="fa-solid fa-rotate-right text-[11px]"></i>
+                    <span>Ôn lại toàn bộ</span>
+                  </button>
+                  <button 
+                    onclick="app.switchVocabViewMode('list')" 
+                    class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs transition border border-slate-200 flex items-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
+                  >
+                    <i class="fa-solid fa-list-ul text-[11px] text-slate-500"></i>
+                    <span>Xem danh sách</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 3D FLIP CARD SCENE -->
+              <div class="flashcard-scene h-60 sm:h-64 w-full max-w-xl mx-auto">
+                <div id="flashcardCardElement" class="flashcard-card" onclick="app.flipFlashcard()">
+                  
+                  <!-- FRONT SIDE -->
+                  <div class="flashcard-face flashcard-face-front bg-white border-2 border-slate-200 p-4 sm:p-5 flex flex-col justify-between shadow-lg">
+                    <div class="flex items-center justify-between text-xs">
+                      <span id="fcFrontGrammarBadge" class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold uppercase tracking-wider border border-blue-200">
+                        Lexical Chunk
+                      </span>
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] text-slate-400 font-mono font-semibold">MẶT TRƯỚC</span>
+                        <button onclick="event.stopPropagation(); app.deleteCurrentFlashcard()" class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer" title="Xóa thẻ này">
+                          <i class="fa-regular fa-trash-can text-xs"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="text-center space-y-2 my-auto">
+                      <h2 id="fcFrontPhraseText" class="text-xl sm:text-2xl font-heading font-extrabold text-slate-900 tracking-wide">
+                        ...
+                      </h2>
+                      <div id="fcFrontIpaText" class="font-mono text-xs sm:text-sm text-blue-600 font-bold tracking-wider">
+                        / ... /
+                      </div>
+                      <div class="pt-1">
+                        <button 
+                          onclick="event.stopPropagation(); app.playFlashcardAudio()" 
+                          class="px-3.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200 inline-flex items-center gap-1.5 transition active:scale-95 shadow-2xs cursor-pointer"
+                        >
+                          <i class="fa-solid fa-volume-high text-xs"></i>
+                          <span>Nghe phát âm</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="text-center">
+                      <span class="text-[10px] sm:text-[11px] text-slate-400 flip-hint-anim flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-arrow-rotate-right text-blue-600 text-[10px]"></i>
+                        <span>Chạm thẻ hoặc bấm <kbd class="px-1 py-0.2 rounded bg-slate-100 border text-slate-600 font-mono text-[9px]">Space</kbd> để lật nghĩa</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- BACK SIDE -->
+                  <div class="flashcard-face flashcard-face-back bg-slate-50 border-2 border-blue-400/40 p-4 sm:p-5 flex flex-col justify-between shadow-lg text-left">
+                    <div class="flex items-center justify-between text-xs">
+                      <span id="fcBackPhrasePreview" class="font-bold text-slate-900 text-xs sm:text-sm">
+                        ...
+                      </span>
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] text-slate-400 font-mono font-semibold">MẶT SAU</span>
+                        <button onclick="event.stopPropagation(); app.deleteCurrentFlashcard()" class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer" title="Xóa thẻ này">
+                          <i class="fa-regular fa-trash-can text-xs"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="space-y-2 my-auto text-xs">
+                      <!-- Meaning -->
+                      <div class="p-2 bg-white rounded-xl border border-slate-200 shadow-2xs">
+                        <span class="text-[9px] text-slate-400 uppercase tracking-wider block font-bold mb-0.5">Nghĩa tiếng Việt:</span>
+                        <p id="fcBackMeaningText" class="text-sm sm:text-base font-extrabold text-slate-900">...</p>
+                      </div>
+
+                      <!-- Nuance -->
+                      <div class="p-2 bg-blue-50/80 rounded-xl border border-blue-200">
+                        <span class="text-[9px] text-blue-700 uppercase tracking-wider block font-bold mb-0.5 flex items-center gap-1">
+                          <i class="fa-solid fa-masks-theater text-blue-600"></i>
+                          <span>Sắc thái nghĩa:</span>
+                        </span>
+                        <p id="fcBackNuanceText" class="text-xs text-slate-700 leading-relaxed font-medium">...</p>
+                      </div>
+
+                      <!-- Context Sentence -->
+                      <div id="fcBackContextSentenceBox" class="p-1.5 bg-white rounded-xl border border-slate-200 text-[11px] text-slate-700">
+                        <span class="text-[9px] text-slate-400 block font-semibold">Câu gốc:</span>
+                        <p id="fcBackContextSentenceText" class="italic text-slate-800 font-medium truncate">"..."</p>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-1 border-t border-slate-200 text-xs">
+                      <button 
+                        onclick="event.stopPropagation(); app.openFlashcardYouGlish()" 
+                        class="text-blue-600 hover:underline flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold"
+                      >
+                        <i class="fa-solid fa-earth-americas text-[10px]"></i>
+                        <span>YouGlish</span>
+                      </button>
+                      <span class="text-[10px] text-slate-400 italic">Chạm để lật lại ↺</span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- ANKI 4-BUTTON SRS ACTION BAR (Compact 1-Row) -->
+              <div id="flashcardSrsActionBar" class="pt-1 max-w-xl mx-auto w-full">
+                <div class="grid grid-cols-4 gap-1.5 sm:gap-2 text-center">
+                  <!-- 1. Again -->
+                  <button 
+                    onclick="app.rateFlashcardAnki('again')" 
+                    class="p-1.5 sm:p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 font-bold text-[11px] sm:text-xs transition flex flex-col items-center justify-center shadow-2xs active:scale-95 cursor-pointer"
+                    title="Phím tắt: 1"
+                  >
+                    <div class="flex items-center gap-1">
+                      <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                      <span>Again</span>
+                    </div>
+                    <span id="fcAgainIntervalText" class="text-[10px] text-rose-600 font-mono font-medium">&lt; 10p</span>
+                  </button>
+
+                  <!-- 2. Hard -->
+                  <button 
+                    onclick="app.rateFlashcardAnki('hard')" 
+                    class="p-1.5 sm:p-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-bold text-[11px] sm:text-xs transition flex flex-col items-center justify-center shadow-2xs active:scale-95 cursor-pointer"
+                    title="Phím tắt: 2"
+                  >
+                    <div class="flex items-center gap-1">
+                      <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      <span>Hard</span>
+                    </div>
+                    <span id="fcHardIntervalText" class="text-[10px] text-amber-600 font-mono font-medium">1 ngày</span>
+                  </button>
+
+                  <!-- 3. Good -->
+                  <button 
+                    onclick="app.rateFlashcardAnki('good')" 
+                    class="p-1.5 sm:p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-[11px] sm:text-xs transition flex flex-col items-center justify-center shadow-2xs active:scale-95 cursor-pointer"
+                    title="Phím tắt: 3"
+                  >
+                    <div class="flex items-center gap-1">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      <span>Good</span>
+                    </div>
+                    <span id="fcGoodIntervalText" class="text-[10px] text-emerald-600 font-mono font-medium">3 ngày</span>
+                  </button>
+
+                  <!-- 4. Easy -->
+                  <button 
+                    onclick="app.rateFlashcardAnki('easy')" 
+                    class="p-1.5 sm:p-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-bold text-[11px] sm:text-xs transition flex flex-col items-center justify-center shadow-2xs active:scale-95 cursor-pointer"
+                    title="Phím tắt: 4"
+                  >
+                    <div class="flex items-center gap-1">
+                      <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                      <span>Easy</span>
+                    </div>
+                    <span id="fcEasyIntervalText" class="text-[10px] text-blue-600 font-mono font-medium">7 ngày</span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- VIEW 2: VOCABULARY LIST & SEARCH VIEW -->
+            <div id="vocabListViewContainer" class="hidden space-y-3">
+              <!-- Search & Filter Controls -->
+              <div class="flex flex-col sm:flex-row gap-2">
+                <div class="relative flex-1">
+                  <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+                  <input 
+                    type="text" 
+                    id="vocabListSearchInput" 
+                    placeholder="Tìm kiếm theo từ tiếng Anh hoặc nghĩa tiếng Việt..." 
+                    class="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-900 text-xs placeholder-slate-400 focus:outline-none focus:border-blue-500 shadow-xs"
+                    oninput="app.filterVocabList(this.value, app.currentVocabListFilter)"
+                  />
+                </div>
+                <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs flex-wrap">
+                  <button onclick="app.setVocabListFilter('due_today')" id="btnFilterVocabDueToday" class="px-2.5 py-1 rounded-lg text-rose-700 hover:text-rose-900 text-[11px] font-bold flex items-center gap-1">
+                    <i class="fa-solid fa-fire text-amber-500"></i>
+                    <span>Cần ôn</span>
+                  </button>
+                  <button onclick="app.setVocabListFilter('all')" id="btnFilterVocabAll" class="px-2.5 py-1 rounded-lg bg-white text-slate-900 font-bold shadow-xs text-[11px]">Tất cả</button>
+                  <button onclick="app.setVocabListFilter('learning')" id="btnFilterVocabLearning" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 text-[11px] font-medium">Đang học</button>
+                  <button onclick="app.setVocabListFilter('mastered')" id="btnFilterVocabMastered" class="px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 text-[11px] font-medium">Đã thuộc</button>
+                </div>
+              </div>
+
+              <!-- List Cards Container -->
+              <div id="vocabCardsGrid" class="space-y-2.5"></div>
+              
+              <!-- Empty state for list -->
+              <div id="vocabListEmptyState" class="hidden text-center py-12 space-y-2">
+                <i class="fa-solid fa-layer-group text-slate-300 text-3xl"></i>
+                <p class="text-xs text-slate-500">Không tìm thấy từ vựng nào phù hợp.</p>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+    </div> <!-- /#activeWorkspaceView -->
+
+  </main>
+  </div> <!-- /#appMainArea -->
+
+  <!-- ================================================================= -->
+  <!-- MODAL: SAVE CLIP TO FIRESTORE                                     -->
+  <!-- ================================================================= -->
+  <div id="saveClipModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-lg rounded-2xl p-6 border border-slate-200 shadow-2xl space-y-5 modal-content">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2 text-slate-900 font-heading font-bold text-lg">
+          <i class="fa-solid fa-bookmark text-blue-600"></i>
+          <span>Save Practice Clip</span>
+        </div>
+        <button onclick="app.closeSaveClipModal()" class="text-slate-400 hover:text-slate-900 p-1">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Clip Title</label>
+          <input 
+            type="text" 
+            id="inputClipTitle" 
+            placeholder="e.g., Steve Jobs - Connecting the Dots (Clip 1)" 
+            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white"
+          />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span class="text-slate-500 block font-medium">Start Timestamp</span>
+            <span id="modalStartTime" class="text-sm font-mono font-bold text-blue-600">00:00.0</span>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <span class="text-slate-500 block font-medium">End Timestamp</span>
+            <span id="modalEndTime" class="text-sm font-mono font-bold text-blue-600">00:00.0</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Transcript Snippet Preview</label>
+          <div id="modalSnippetPreview" class="max-h-28 overflow-y-auto p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs italic leading-relaxed">
+            No segment selected.
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-slate-800 space-y-1">
+          <div class="flex items-center gap-1.5 font-bold text-blue-700">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>Firestore Document Structure</span>
+          </div>
+          <p class="text-[11px] text-slate-600">
+            Will be stored under <code class="text-blue-700 font-bold font-mono">users/{userId}/clips/{clipId}</code> with 5 practice mode flags initialized.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button onclick="app.closeSaveClipModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition border border-slate-200">
+          Cancel
+        </button>
+        <button onclick="app.confirmSaveClip()" id="btnConfirmSave" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-2 shadow-md shadow-blue-500/20">
+          <i class="fa-solid fa-check"></i>
+          <span>Save Clip</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: SAVED CLIPS & VIDEO COURSES LIBRARY                        -->
+  <!-- ================================================================= -->
+  <div id="savedClipsModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-3xl rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-2xl space-y-3 max-h-[92vh] flex flex-col modal-content">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs border border-blue-200 shrink-0">
+            <i class="fa-solid fa-graduation-cap"></i>
+          </div>
+          <h3 class="font-heading font-bold text-sm sm:text-base text-slate-900 truncate">
+            Thư Viện Bài Học
+          </h3>
+          <span id="savedVideosCountBadge" class="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full shrink-0">0 Video</span>
+        </div>
+        <button onclick="app.closeSavedClipsModal()" class="text-slate-400 hover:text-slate-900 p-1 rounded-lg hover:bg-slate-100 transition cursor-pointer" title="Đóng">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <!-- Single Search & Filter Row -->
+      <div class="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+        <div class="relative flex-1 min-w-[160px]">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+          <input 
+            type="text" 
+            id="inputSearchSavedVideos" 
+            placeholder="Tìm video hoặc đoạn clip..." 
+            class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+            oninput="app.filterSavedVideosList(this.value)"
+          />
+        </div>
+        
+        <!-- Filter Tabs -->
+        <div class="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs shrink-0">
+          <button onclick="app.setSavedVideosFilter('all')" id="btnFilterSavedAll" class="px-2 py-1 rounded-lg bg-white text-slate-900 font-bold shadow-2xs text-[11px] cursor-pointer">Tất cả</button>
+          <button onclick="app.setSavedVideosFilter('in_progress')" id="btnFilterSavedLearning" class="px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900 text-[11px] font-medium cursor-pointer">Đang học</button>
+          <button onclick="app.setSavedVideosFilter('graduated')" id="btnFilterSavedGraduated" class="px-2 py-1 rounded-lg text-slate-600 hover:text-slate-900 text-[11px] font-medium flex items-center gap-1 cursor-pointer">
+            <span>👑 Xong</span>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-1 shrink-0">
+          <button onclick="app.toggleAllSavedVideoGroups(true)" class="px-2 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-blue-700 font-bold border border-slate-200 text-[11px] shadow-2xs transition flex items-center gap-1 cursor-pointer" title="Mở rộng tất cả">
+            <i class="fa-solid fa-folder-open text-blue-600 text-[10px]"></i>
+            <span class="hidden sm:inline">Mở</span>
+          </button>
+          <button onclick="app.toggleAllSavedVideoGroups(false)" class="px-2 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-600 font-bold border border-slate-200 text-[11px] shadow-2xs transition flex items-center gap-1 cursor-pointer" title="Thu gọn tất cả">
+            <i class="fa-solid fa-folder-closed text-slate-400 text-[10px]"></i>
+            <span class="hidden sm:inline">Gọn</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Parent Videos & Clips List -->
+      <div id="savedClipsList" class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+        <!-- Empty state or Parent Video cards -->
+        <div id="savedClipsEmpty" class="text-center py-12 text-slate-400 space-y-2">
+          <i class="fa-regular fa-folder-open text-4xl text-slate-300"></i>
+          <p class="text-sm font-bold text-slate-700">Chưa có video hoặc clip nào được lưu</p>
+          <p class="text-xs text-slate-500">Hãy chọn một video YouTube bất kỳ, cắt đoạn bạn muốn học và nhấn "Lưu Clip".</p>
+        </div>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="flex items-center justify-between pt-2 border-t border-slate-100 text-xs text-slate-500">
+        <span class="text-[11px] text-slate-500 truncate">
+          🎁 Hoàn thành 100% video: <strong>+500 EXP</strong>
+        </span>
+        <button onclick="app.closeSavedClipsModal()" class="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-semibold text-xs cursor-pointer">
+          Đóng
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: SETTINGS & ACCOUNT                                         -->
+  <!-- ================================================================= -->
+  <div id="settingsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-md rounded-3xl p-6 border border-slate-200 shadow-2xl space-y-4 modal-content text-left">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm border border-blue-200 shadow-2xs">
+            <i class="fa-solid fa-sliders"></i>
+          </div>
+          <div>
+            <h3 class="font-heading font-black text-base text-slate-900">
+              Cài Đặt Ứng Dụng
+            </h3>
+            <p class="text-xs text-slate-500">Tài khoản & Thông tin hệ thống</p>
+          </div>
+        </div>
+        <button onclick="app.closeSettingsModal()" class="text-slate-400 hover:text-slate-900 p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer" title="Đóng">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3.5 text-xs">
+        
+        <!-- Account Info Card -->
+        <div class="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+              <i class="fa-solid fa-user-check text-blue-600"></i>
+              <span>Tài Khoản Học Tập</span>
+            </span>
+            <span id="settingsAccountStatusBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+              Đang hoạt động
+            </span>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 p-2.5 bg-white rounded-xl border border-blue-100 shadow-2xs">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div id="settingsUserAvatar" class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                T
+              </div>
+              <div class="min-w-0">
+                <div id="settingsUserName" class="font-bold text-slate-900 truncate">Trần Khả Hào</div>
+                <div id="settingsUserEmail" class="text-[11px] text-slate-500 truncate font-mono">haotrankha53@gmail.com</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1 shrink-0">
+              <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[10px] flex items-center gap-1">
+                <i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i>
+                <span class="hidden sm:inline">Đồng bộ</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- System & AI Integration Info -->
+        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-sparkles text-amber-500"></i>
+            <div>
+              <span class="font-bold text-slate-800 block text-xs">Trí Tuệ Nhân Tạo</span>
+              <span class="text-[10px] text-slate-500">Google Gemini 1.5 Flash (Tích hợp sẵn)</span>
+            </div>
+          </div>
+          <span class="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
+            ✓ Sẵn sàng
+          </span>
+        </div>
+
+        <!-- App Version -->
+        <div class="text-center pt-1 text-[11px] text-slate-400">
+          <span>LingoTube AI • Phiên bản 2.5</span>
+        </div>
+
+        <!-- Hidden input for backward compatibility -->
+        <input type="hidden" id="inputGeminiApiKey" value="" />
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="flex items-center justify-end pt-2 border-t border-slate-100">
+        <button onclick="app.closeSettingsModal()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition shadow-xs cursor-pointer">
+          Đóng
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: DAILY CHECK-IN WELCOME POPUP (TỰ ĐỘNG ĐIỂM DANH)           -->
+  <!-- ================================================================= -->
+  <div id="dailyWelcomeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-md rounded-3xl p-6 sm:p-7 border border-emerald-200 shadow-2xl space-y-4 modal-content text-left">
+      
+      <!-- Top Icon Badge -->
+      <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl border border-emerald-200 shadow-xs">
+        <i class="fa-solid fa-calendar-check"></i>
+      </div>
+
+      <!-- Header & Subtitle -->
+      <div>
+        <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          Phiên Luyện Hôm Nay
+        </div>
+        <h3 class="font-heading font-black text-xl text-slate-900 mt-0.5" id="welcomeModalGreetingTitle">
+          Chào mừng trở lại, Hào! 👋
+        </h3>
+        <p class="text-xs text-slate-600 mt-1">
+          Hệ thống đã tự động điểm danh: <strong class="text-emerald-700 font-bold" id="welcomeModalStreakText">Chuỗi 1 Ngày (+50 EXP)</strong>
+        </p>
+      </div>
+
+      <!-- 7-Day Week Indicator Strip -->
+      <div id="welcomeWeeklyCheckInDays" class="grid grid-cols-7 gap-1.5 pt-2 pb-1 border-y border-slate-100">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Auto Countdown Progress Bar -->
+      <div class="space-y-1">
+        <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+          <div id="welcomeAutoCloseProgressBar" class="h-full bg-emerald-500 rounded-full transition-all duration-100 w-full"></div>
+        </div>
+        <p class="text-[11px] text-slate-400 font-medium" id="welcomeCountdownText">
+          Tự động đóng sau 2 giây...
+        </p>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div class="pt-1 flex items-center justify-between gap-2.5">
+        <button 
+          type="button" 
+          onclick="app.closeDailyWelcomeModal()" 
+          class="flex-1 py-2.5 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-500/20 transition active:scale-98 cursor-pointer flex items-center justify-center gap-1.5"
+        >
+          <i class="fa-solid fa-bolt text-amber-300 text-xs"></i>
+          <span>Bắt đầu học ngay</span>
+        </button>
+        <button 
+          type="button" 
+          onclick="app.closeDailyWelcomeModal()" 
+          class="py-2.5 px-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition cursor-pointer"
+        >
+          Ở lại trang chủ
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: HỒ SƠ HỌC VIÊN & THỐNG KÊ THÀNH TÍCH                       -->
+  <!-- ================================================================= -->
+  <div id="userProfileModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-lg rounded-3xl p-6 sm:p-7 border border-blue-200 shadow-2xl space-y-5 modal-content">
+      
+      <!-- Header with Close Button -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
+        <div class="flex items-center gap-2 text-slate-900 font-heading font-bold text-base">
+          <i class="fa-solid fa-id-card text-blue-600"></i>
+          <span>Hồ Sơ Cá Nhân & Thành Tích</span>
+        </div>
+        <button onclick="app.closeUserProfileModal()" class="text-slate-400 hover:text-slate-900 p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer" title="Đóng">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- User Card Banner -->
+      <div class="p-4 rounded-2xl bg-gradient-to-br from-blue-50 via-indigo-50/50 to-purple-50 border border-blue-200/80 flex items-center gap-4">
+        <div id="profileModalAvatar" class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-xl font-black shadow-lg shadow-blue-500/25 shrink-0">
+          T
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <h3 id="profileModalName" class="font-heading font-black text-base text-slate-900 truncate">Trần Khả Hào</h3>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-300 shrink-0">Học viên</span>
+          </div>
+          <p id="profileModalEmail" class="text-xs text-slate-500 font-mono truncate">haotrankha53@gmail.com</p>
+          <div class="text-[11px] text-emerald-600 font-medium flex items-center gap-1 mt-1">
+            <i class="fa-solid fa-circle-check text-[10px]"></i>
+            <span>Dữ liệu lưu trữ đám mây an toàn</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Achievement Stats Grid (4 Cards) -->
+      <div class="space-y-2 text-left">
+        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block px-1">Thống kê tiến trình học tập</span>
+        <div class="grid grid-cols-2 gap-2.5">
+          <!-- 1. Streak -->
+          <div class="p-3.5 rounded-2xl bg-orange-50/80 border border-orange-200 space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-orange-800">Số ngày học</span>
+              <i class="fa-solid fa-fire text-amber-500 text-base"></i>
+            </div>
+            <div class="font-black text-2xl font-mono text-orange-700" id="profileModalStreak">1 Ngày</div>
+            <p class="text-[10px] text-orange-600/80">Kỷ lục: <strong id="profileModalLongestStreak">1 ngày</strong></p>
+          </div>
+
+          <!-- 2. EXP -->
+          <div class="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200 space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-amber-800">Kinh nghiệm</span>
+              <i class="fa-solid fa-star text-amber-500 text-base"></i>
+            </div>
+            <div class="font-black text-2xl font-mono text-amber-700" id="profileModalExp">50 EXP</div>
+            <p class="text-[10px] text-amber-600/80">Cấp độ: <strong>Tập sự</strong></p>
+          </div>
+
+          <!-- 3. Completed Clips -->
+          <div class="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200 space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-emerald-800">Clip hoàn thành</span>
+              <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+            </div>
+            <div class="font-black text-2xl font-mono text-emerald-700" id="profileModalCompletedClips">1 Clip</div>
+            <p class="text-[10px] text-emerald-600/80">Tổng clip đã cắt: <strong id="profileModalTotalClips">1</strong></p>
+          </div>
+
+          <!-- 4. Vocab Count -->
+          <div class="p-3.5 rounded-2xl bg-blue-50/80 border border-blue-200 space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-blue-800">Từ vựng 3D</span>
+              <i class="fa-solid fa-layer-group text-blue-600 text-base"></i>
+            </div>
+            <div class="font-black text-2xl font-mono text-blue-700" id="profileModalVocabCount">0 Từ</div>
+            <p class="text-[10px] text-blue-600/80">Đã lưu trong sổ từ</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons: Settings & Logout -->
+      <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2.5">
+        <button 
+          type="button" 
+          onclick="app.openSettingsModal(); app.closeUserProfileModal()" 
+          class="flex-1 py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+        >
+          <i class="fa-solid fa-sliders text-slate-500"></i>
+          <span>Cài đặt & Sao lưu</span>
+        </button>
+
+        <button 
+          type="button" 
+          onclick="app.signOut(); app.closeUserProfileModal()" 
+          class="flex-1 py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs border border-rose-200 transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+        >
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span>Đăng xuất</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: ADVANCED AUTHENTICATION & CLOUD SYNC                       -->
+  <!-- ================================================================= -->
+  <div id="authModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-md rounded-3xl p-6 sm:p-7 border border-blue-200 shadow-2xl space-y-5 modal-content">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-lg shadow-md shadow-blue-500/20">
+            <i class="fa-solid fa-user-lock"></i>
+          </div>
+          <div>
+            <h3 class="font-heading font-black text-base sm:text-lg text-slate-900 flex items-center gap-2">
+              <span>Tài Khoản Học Tập</span>
+            </h3>
+            <p class="text-xs text-slate-500">Lưu trữ từ vựng 3D, bài học và chuỗi Streak vĩnh viễn.</p>
+          </div>
+        </div>
+        <button onclick="app.closeAuthModal()" class="text-slate-400 hover:text-slate-900 p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer" title="Đóng">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Tab Switcher: Đăng Nhập vs Đăng Ký -->
+      <div class="flex items-center p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-bold">
+        <button 
+          id="btnTabAuthSignIn" 
+          onclick="app.switchAuthTab('signin')" 
+          class="flex-1 py-2 rounded-xl bg-white text-blue-700 shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+        >
+          <i class="fa-solid fa-arrow-right-to-bracket text-xs"></i>
+          <span>Đăng Nhập</span>
+        </button>
+        <button 
+          id="btnTabAuthSignUp" 
+          onclick="app.switchAuthTab('signup')" 
+          class="flex-1 py-2 rounded-xl text-slate-600 hover:text-slate-900 transition flex items-center justify-center gap-1.5 cursor-pointer"
+        >
+          <i class="fa-solid fa-user-plus text-xs"></i>
+          <span>Đăng Ký Mới</span>
+        </button>
+      </div>
+
+      <!-- Sign In Form -->
+      <form id="formAuthSignIn" onsubmit="app.handleEmailSignIn(event)" class="space-y-3.5">
+        <div class="space-y-1 text-left">
+          <label class="block text-[11px] font-bold text-slate-700">Địa chỉ Email:</label>
+          <div class="relative">
+            <i class="fa-solid fa-envelope absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+            <input 
+              type="email" 
+              id="inputSignInEmail" 
+              placeholder="tenban@gmail.com" 
+              class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              required 
+            />
+          </div>
+        </div>
+
+        <div class="space-y-1 text-left">
+          <div class="flex items-center justify-between">
+            <label class="block text-[11px] font-bold text-slate-700">Mật khẩu:</label>
+            <button type="button" onclick="app.sendPasswordReset()" class="text-[10px] text-blue-600 hover:underline cursor-pointer">Quên mật khẩu?</button>
+          </div>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+            <input 
+              type="password" 
+              id="inputSignInPassword" 
+              placeholder="••••••••" 
+              class="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              required 
+            />
+            <button 
+              type="button" 
+              onclick="app.togglePasswordVisibility('inputSignInPassword', 'iconSignInPassEye')" 
+              class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+            >
+              <i id="iconSignInPassEye" class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          id="btnSubmitSignIn" 
+          class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+        >
+          <i class="fa-solid fa-right-to-bracket"></i>
+          <span>Đăng Nhập</span>
+        </button>
+      </form>
+
+      <!-- Sign Up Form (Hidden by default) -->
+      <form id="formAuthSignUp" onsubmit="app.handleEmailSignUp(event)" class="hidden space-y-3.5">
+        <div class="space-y-1 text-left">
+          <label class="block text-[11px] font-bold text-slate-700">Họ và Tên của bạn:</label>
+          <div class="relative">
+            <i class="fa-solid fa-user absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+            <input 
+              type="text" 
+              id="inputSignUpName" 
+              placeholder="Trần Khả Hào" 
+              class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              required 
+            />
+          </div>
+        </div>
+
+        <div class="space-y-1 text-left">
+          <label class="block text-[11px] font-bold text-slate-700">Địa chỉ Email:</label>
+          <div class="relative">
+            <i class="fa-solid fa-envelope absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+            <input 
+              type="email" 
+              id="inputSignUpEmail" 
+              placeholder="haotrankha53@gmail.com" 
+              class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              required 
+            />
+          </div>
+        </div>
+
+        <div class="space-y-1 text-left">
+          <label class="block text-[11px] font-bold text-slate-700">Mật khẩu (tối thiểu 6 ký tự):</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+            <input 
+              type="password" 
+              id="inputSignUpPassword" 
+              placeholder="••••••••" 
+              minlength="6" 
+              class="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+              required 
+            />
+            <button 
+              type="button" 
+              onclick="app.togglePasswordVisibility('inputSignUpPassword', 'iconSignUpPassEye')" 
+              class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+            >
+              <i id="iconSignUpPassEye" class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          id="btnSubmitSignUp" 
+          class="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/25 transition active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+        >
+          <i class="fa-solid fa-user-plus"></i>
+          <span>Tạo Tài Khoản & Lưu Dữ Liệu</span>
+        </button>
+      </form>
+
+      <!-- Footer: Guest mode option -->
+      <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+        <button 
+          type="button" 
+          onclick="app.signInAnonymous()" 
+          class="text-slate-500 hover:text-slate-800 text-[11px] font-medium flex items-center gap-1.5 cursor-pointer"
+        >
+          <i class="fa-solid fa-user-secret text-slate-400"></i>
+          <span>Dùng thử chế độ Khách (Lưu máy này)</span>
+        </button>
+
+        <button 
+          type="button" 
+          onclick="app.closeAuthModal()" 
+          class="text-slate-400 hover:text-slate-700 text-[11px]"
+        >
+          Đóng
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: SPLIT SENTENCE (TÁCH CÂU PHỤ ĐỀ)                            -->
+  <!-- ================================================================= -->
+  <div id="splitSentenceModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-lg rounded-2xl p-6 border border-slate-200 shadow-2xl space-y-5 modal-content">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2 text-slate-900 font-heading font-bold text-base">
+          <i class="fa-solid fa-scissors text-blue-600"></i>
+          <span>Tách câu phụ đề</span>
+          <span id="splitModalSentenceIdx" class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono border border-slate-200 font-bold">#1</span>
+        </div>
+        <button onclick="app.closeSplitSentenceModal()" class="text-slate-400 hover:text-slate-900 transition">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+          <span class="text-slate-600 text-[11px] block font-medium">Bấm vào bất kỳ từ nào dưới đây để chọn điểm cắt (hoặc kéo thanh trượt):</span>
+          <div id="splitInteractiveWordBox" class="flex flex-wrap gap-1.5 pt-1"></div>
+        </div>
+
+        <!-- Live Preview of 2 Resulting Sentences -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+          <!-- Part 1 -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] font-bold text-blue-700">
+              <span>Đoạn 1:</span>
+              <span id="splitPreviewTime1" class="font-mono text-[10px] text-slate-500">00:00.0 - 00:00.0</span>
+            </div>
+            <p id="splitPreviewText1" class="text-slate-900 text-xs leading-relaxed min-h-[36px] bg-white p-2 rounded-lg border border-slate-200 font-medium">...</p>
+          </div>
+
+          <!-- Part 2 -->
+          <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] font-bold text-indigo-700">
+              <span>Đoạn 2:</span>
+              <span id="splitPreviewTime2" class="font-mono text-[10px] text-slate-500">00:00.0 - 00:00.0</span>
+            </div>
+            <p id="splitPreviewText2" class="text-slate-900 text-xs leading-relaxed min-h-[36px] bg-white p-2 rounded-lg border border-slate-200 font-medium">...</p>
+          </div>
+        </div>
+
+        <!-- Fine-tune Split Timestamp -->
+        <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
+          <label class="text-slate-700 text-[11px] flex items-center gap-1.5 font-medium">
+            <i class="fa-regular fa-clock text-blue-600"></i>
+            <span>Mốc thời gian tách (giây):</span>
+          </label>
+          <div class="flex items-center gap-2">
+            <input 
+              type="number" 
+              id="inputSplitTimestamp" 
+              step="0.1" 
+              class="w-24 px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500 text-right"
+              oninput="app.onSplitTimestampChanged(this.value)"
+            />
+            <span class="text-slate-500 font-mono text-xs">s</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+        <button onclick="app.closeSplitSentenceModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition border border-slate-200">
+          Hủy bỏ
+        </button>
+        <button onclick="app.confirmSplitSentence()" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-blue-500/20">
+          <i class="fa-solid fa-scissors"></i>
+          <span>Xác nhận tách câu</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: ADD CUSTOM VOCABULARY CARD                                 -->
+  <!-- ================================================================= -->
+  <div id="addCustomVocabModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-md rounded-2xl p-6 border border-slate-200 shadow-2xl space-y-4 modal-content">
+      
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2 text-slate-900 font-heading font-bold text-base">
+          <i class="fa-solid fa-plus-circle text-blue-600"></i>
+          <span>Thêm từ vựng mới</span>
+        </div>
+        <button onclick="app.closeAddVocabModal()" class="text-slate-400 hover:text-slate-900 transition">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-700 font-semibold mb-1">Từ / Cụm từ tiếng Anh (*):</label>
+          <input 
+            type="text" 
+            id="inputCustomVocabPhrase" 
+            placeholder="e.g. practice and develop" 
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500 focus:bg-white"
+            onblur="app.autoFillCustomVocabDetails(this.value)"
+          />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-slate-600 font-medium mb-1">Phiên âm IPA:</label>
+            <input 
+              type="text" 
+              id="inputCustomVocabIpa" 
+              placeholder="/ ... /" 
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500 focus:bg-white"
+            />
+          </div>
+          <div>
+            <label class="block text-slate-600 font-medium mb-1">Phân loại / Ngữ pháp:</label>
+            <input 
+              type="text" 
+              id="inputCustomVocabGrammar" 
+              placeholder="e.g. Phrasal verb, Collocation" 
+              class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500 focus:bg-white"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-700 font-semibold mb-1">Nghĩa tiếng Việt (*):</label>
+          <input 
+            type="text" 
+            id="inputCustomVocabMeaning" 
+            placeholder="e.g. rèn luyện và trau dồi" 
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500 focus:bg-white"
+          />
+        </div>
+
+        <div>
+          <label class="block text-slate-600 font-medium mb-1">Sắc thái nghĩa (Nuance):</label>
+          <textarea 
+            id="inputCustomVocabNuance" 
+            rows="2" 
+            placeholder="e.g. Nhấn mạnh sự kiên trì, rèn luyện bền bỉ từng ngày..." 
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500 focus:bg-white resize-none"
+          ></textarea>
+        </div>
+
+        <div>
+          <label class="block text-slate-600 font-medium mb-1">Câu ví dụ trong ngữ cảnh:</label>
+          <textarea 
+            id="inputCustomVocabContext" 
+            rows="2" 
+            placeholder="e.g. A special quality that we all need to practice and develop..." 
+            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500 focus:bg-white resize-none"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+        <button onclick="app.closeAddVocabModal()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition border border-slate-200">
+          Hủy bỏ
+        </button>
+        <button onclick="app.saveCustomVocabCard()" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-md shadow-blue-500/20">
+          <i class="fa-solid fa-floppy-disk"></i>
+          <span>Lưu từ vựng</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: DEDICATED VIDEO IMPORT & SEARCH SCREEN                     -->
+  <!-- ================================================================= -->
+  <div id="videoImportModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-2xl rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-2xl space-y-4 sm:space-y-5 modal-content">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+            <i class="fa-brands fa-youtube text-lg"></i>
+          </div>
+          <div>
+            <h3 class="font-heading font-bold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+              <span>Nhập / Chọn Video YouTube</span>
+              <span class="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">Smart Deduplication</span>
+            </h3>
+            <p class="text-[11px] sm:text-xs text-slate-500">Dán link YouTube bất kỳ để tải phụ đề tiếng Anh và luyện nghe thông minh.</p>
+          </div>
+        </div>
+        <button id="btnCloseVideoImportModal" onclick="app.closeVideoImportModal()" class="text-slate-400 hover:text-slate-900 p-1.5 rounded-lg hover:bg-slate-100 transition" title="Đóng">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- URL Input Form -->
+      <form id="videoImportForm" onsubmit="app.handleVideoImport(event)" class="space-y-3">
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <i class="fa-brands fa-youtube text-lg text-red-500"></i>
+          </div>
+          <input 
+            type="text" 
+            id="youtubeUrlInput" 
+            placeholder="Dán link YouTube (e.g. https://youtu.be/... hoặc https://www.youtube.com/watch?v=...)" 
+            class="w-full pl-10 pr-20 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition"
+            required
+          />
+          <button 
+            type="button" 
+            onclick="app.pasteClipboard()" 
+            class="absolute inset-y-1.5 right-1.5 px-2.5 flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition font-medium"
+            title="Dán từ Clipboard"
+          >
+            <i class="fa-regular fa-clipboard"></i>
+            <span>Dán</span>
+          </button>
+        </div>
+
+        <button 
+          type="submit" 
+          id="btnFetchTranscript" 
+          class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 active:scale-98"
+        >
+          <i class="fa-solid fa-bolt"></i>
+          <span>Tải Video & Phụ đề tiếng Anh</span>
+        </button>
+      </form>
+
+      <!-- Quick Sample Videos Section -->
+      <div class="space-y-2 pt-2 border-t border-slate-100">
+        <div class="flex items-center justify-between text-xs text-slate-500">
+          <span class="font-bold text-slate-700 flex items-center gap-1.5">
+            <i class="fa-solid fa-lightbulb text-amber-500"></i>
+            <span>Hoặc chọn nhanh video mẫu chất lượng cao:</span>
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <!-- Sample 1 -->
+          <div onclick="app.loadSampleVideo('UF8uR6Z6KLc')" class="p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50/60 border border-slate-200 hover:border-blue-300 transition cursor-pointer flex items-center gap-3 group shadow-xs">
+            <img src="https://i.ytimg.com/vi/UF8uR6Z6KLc/hqdefault.jpg" class="w-16 h-11 object-cover rounded-lg border border-slate-200 shrink-0" />
+            <div class="min-w-0">
+              <h4 class="font-bold text-xs text-slate-900 truncate group-hover:text-blue-600 transition">Steve Jobs Stanford Speech</h4>
+              <p class="text-[10px] text-slate-500 truncate">Stanford University • Phát âm chuẩn Mỹ</p>
+            </div>
+          </div>
+
+          <!-- Sample 2 -->
+          <div onclick="app.loadSampleVideo('Ks-_Mh1QhMc')" class="p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50/60 border border-slate-200 hover:border-blue-300 transition cursor-pointer flex items-center gap-3 group shadow-xs">
+            <img src="https://i.ytimg.com/vi/Ks-_Mh1QhMc/hqdefault.jpg" class="w-16 h-11 object-cover rounded-lg border border-slate-200 shrink-0" />
+            <div class="min-w-0">
+              <h4 class="font-bold text-xs text-slate-900 truncate group-hover:text-blue-600 transition">TED Talk: Body Language</h4>
+              <p class="text-[10px] text-slate-500 truncate">Amy Cuddy • Diễn thuyết truyền cảm</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: DAILY CHECK-IN & STREAK REWARDS                            -->
+  <!-- ================================================================= -->
+  <div id="dailyCheckInModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-lg rounded-2xl p-6 border border-slate-200 shadow-2xl space-y-5 modal-content">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
+            <i class="fa-solid fa-fire text-lg"></i>
+          </div>
+          <div>
+            <h3 class="font-heading font-bold text-base text-slate-900 flex items-center gap-2">
+              <span>Điểm danh hằng ngày & Chuỗi học tập</span>
+              <span class="text-[10px] font-bold text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-md">Daily Streak</span>
+            </h3>
+            <p class="text-xs text-slate-500">Giữ lửa thói quen luyện nghe tiếng Anh mỗi ngày.</p>
+          </div>
+        </div>
+        <button onclick="app.closeDailyCheckInModal()" class="text-slate-400 hover:text-slate-900 p-1.5 rounded-lg hover:bg-slate-100 transition" title="Đóng">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Stats Grid (3 Metrics) -->
+      <div class="grid grid-cols-3 gap-2.5 text-center">
+        <div class="p-3 bg-orange-50/70 rounded-xl border border-orange-200">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-orange-700 block mb-0.5">🔥 Chuỗi hiện tại</span>
+          <span id="modalCurrentStreakVal" class="text-xl font-black font-mono text-orange-600">0</span>
+          <span class="text-[10px] text-orange-600 block">ngày liên tiếp</span>
+        </div>
+        <div class="p-3 bg-blue-50/70 rounded-xl border border-blue-200">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-blue-700 block mb-0.5">🏆 Kỷ lục Streak</span>
+          <span id="modalLongestStreakVal" class="text-xl font-black font-mono text-blue-600">0</span>
+          <span class="text-[10px] text-blue-600 block">ngày dài nhất</span>
+        </div>
+        <div class="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block mb-0.5">⭐ Tổng EXP</span>
+          <span id="modalTotalExpVal" class="text-xl font-black font-mono text-emerald-600">0</span>
+          <span class="text-[10px] text-emerald-600 block">điểm thưởng</span>
+        </div>
+      </div>
+
+      <!-- 7-Day Strip in Modal -->
+      <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+        <div class="flex items-center justify-between text-xs text-slate-700 font-bold">
+          <span>Lịch tuần này:</span>
+          <span class="text-[11px] font-normal text-slate-500" id="modalWeekRangeText">Thứ 2 - Chủ Nhật</span>
+        </div>
+        <div id="modalWeeklyCheckInDaysContainer" class="grid grid-cols-7 gap-1.5 pt-1">
+          <!-- Dynamic 7 days -->
+        </div>
+      </div>
+
+      <!-- Daily Motivation Quote -->
+      <div class="p-3.5 bg-blue-50/60 rounded-xl border border-blue-200 space-y-1.5">
+        <div class="flex items-center justify-between text-[11px] font-bold text-blue-700">
+          <span class="flex items-center gap-1">
+            <i class="fa-solid fa-quote-left"></i>
+            <span>Danh ngôn truyền cảm hứng hôm nay:</span>
+          </span>
+          <button onclick="app.speakDailyQuote()" class="p-1 px-2 rounded-md bg-white hover:bg-blue-100 text-blue-600 border border-blue-200 transition" title="Nghe phát âm">
+            <i class="fa-solid fa-volume-high text-[10px]"></i>
+          </button>
+        </div>
+        <p id="dailyQuoteEnText" class="text-xs font-bold text-slate-900 leading-relaxed italic">"Consistency is what transforms average into excellence."</p>
+        <p id="dailyQuoteViText" class="text-[11px] text-slate-600 leading-relaxed font-normal">Sự kiên trì chính là điều biến những điều bình thường thành xuất chúng.</p>
+      </div>
+
+      <!-- Action Button -->
+      <div class="pt-2 border-t border-slate-100">
+        <button 
+          id="btnModalPerformCheckIn" 
+          onclick="app.performDailyCheckIn()" 
+          class="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition flex items-center justify-center gap-2 shadow-md shadow-orange-500/25 active:scale-98"
+        >
+          <i class="fa-solid fa-fire"></i>
+          <span id="btnModalPerformCheckInText">Điểm danh hôm nay (+50 EXP)</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: VIDEO GRADUATION CELEBRATION (+500 EXP REWARD)             -->
+  <!-- ================================================================= -->
+  <div id="videoGraduationModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-md rounded-3xl p-6 sm:p-8 border border-amber-300 shadow-2xl space-y-5 modal-content text-center">
+      
+      <!-- Trophy Animation Icon -->
+      <div class="w-20 h-20 rounded-3xl bg-gradient-to-tr from-amber-400 to-orange-500 mx-auto flex items-center justify-center text-3xl text-white shadow-xl shadow-orange-500/30">
+        <i class="fa-solid fa-trophy flame-anim"></i>
+      </div>
+
+      <div class="space-y-1.5">
+        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-300 text-xs font-bold font-mono">
+          <i class="fa-solid fa-crown text-amber-500"></i>
+          <span>VIDEO MASTERED 100%</span>
+        </div>
+        <h2 class="font-heading font-black text-xl sm:text-2xl text-slate-900">
+          Chúc mừng Tốt Nghiệp Video!
+        </h2>
+        <p id="graduatingVideoTitle" class="text-xs sm:text-sm font-bold text-blue-700 max-w-xs mx-auto truncate">
+          Steve Jobs Stanford Speech
+        </p>
+      </div>
+
+      <!-- Reward Box (+500 EXP) -->
+      <div class="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border border-amber-200 space-y-1">
+        <span class="text-xs font-bold text-amber-800 uppercase tracking-wider">Phần Thưởng Chinh Phục:</span>
+        <div class="text-3xl font-black font-mono text-orange-600 flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-sparkles text-amber-500 text-xl"></i>
+          <span>+500 EXP</span>
+        </div>
+        <p class="text-[11px] text-slate-600">Bạn đã hoàn thành trọn vẹn 100% tất cả các đoạn clip đã tự chia của video này!</p>
+      </div>
+
+      <!-- Action Button -->
+      <button 
+        onclick="app.closeVideoGraduationModal()" 
+        class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-sm transition shadow-lg shadow-orange-500/25 active:scale-98"
+      >
+        <span>Nhận Thưởng & Tiếp Tục Chinh Phục 🚀</span>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: FULL TRANSCRIPT AI SYNC (WHOLE VIDEO IMPORT / TIMESTAMPS)  -->
+  <!-- ================================================================= -->
+  <div id="fullTranscriptSyncModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-3xl rounded-3xl p-5 sm:p-7 border border-indigo-200 shadow-2xl space-y-5 modal-content max-h-[92vh] overflow-y-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-base shadow-sm">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </div>
+          <h3 class="font-heading font-bold text-base text-slate-900">
+            Đồng Bộ Phụ Đề AI
+          </h3>
+        </div>
+        <button onclick="app.closeFullTranscriptSyncModal()" class="text-slate-400 hover:text-slate-900 p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer" title="Đóng">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Step 1: Copy Master Prompt with Whole Video Transcript -->
+      <div class="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-900">
+            1. Sao chép Prompt
+          </span>
+          <span class="text-[11px] font-mono text-blue-700 font-bold" id="fullSyncSentenceCountBadge">Toàn bài</span>
+        </div>
+
+        <div class="relative">
+          <textarea 
+            id="fullSyncPromptTextarea" 
+            rows="5" 
+            readonly 
+            class="w-full p-3 bg-white border border-blue-200 rounded-xl text-xs text-slate-800 font-mono focus:outline-none select-all shadow-inner leading-relaxed"
+          ></textarea>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+          <button 
+            id="btnCopyFullSyncPrompt" 
+            onclick="app.copyFullSyncPrompt()" 
+            class="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <i class="fa-solid fa-copy text-xs"></i>
+            <span id="btnCopyFullSyncPromptText">Sao chép</span>
+          </button>
+
+          <div class="flex items-center gap-1.5">
+            <a href="https://chatgpt.com" target="_blank" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition flex items-center gap-1 shadow-2xs">
+              <i class="fa-solid fa-robot text-emerald-600 text-[10px]"></i>
+              <span>ChatGPT</span>
+            </a>
+            <a href="https://gemini.google.com" target="_blank" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition flex items-center gap-1 shadow-2xs">
+              <i class="fa-solid fa-wand-magic-sparkles text-blue-600 text-[10px]"></i>
+              <span>Gemini</span>
+            </a>
+            <a href="https://claude.ai" target="_blank" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition flex items-center gap-1 shadow-2xs">
+              <i class="fa-solid fa-brain text-amber-700 text-[10px]"></i>
+              <span>Claude</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Paste AI Result -->
+      <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-900">
+            2. Dán kết quả AI
+          </span>
+          <button 
+            type="button" 
+            onclick="document.getElementById('inputPastedAiTranscript').value = ''; document.getElementById('inputPastedAiTranscript').focus();" 
+            class="text-[11px] text-slate-500 hover:text-rose-600 font-medium flex items-center gap-1 transition cursor-pointer"
+            title="Xóa sạch ô này để dán kết quả mới"
+          >
+            <i class="fa-regular fa-trash-can text-xs"></i>
+            <span>Xóa trắng</span>
+          </button>
+        </div>
+
+        <textarea 
+          id="inputPastedAiTranscript" 
+          rows="6" 
+          placeholder="Dán toàn bộ danh sách câu AI đã chia vào đây..." 
+          class="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 font-mono focus:outline-none focus:border-blue-500 shadow-inner leading-relaxed placeholder-slate-400 resize-y"
+        ></textarea>
+      </div>
+
+      <!-- Step 3: Apply & Synchronize Action -->
+      <div class="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100">
+        <button 
+          onclick="app.closeFullTranscriptSyncModal()" 
+          class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition cursor-pointer"
+        >
+          Đóng
+        </button>
+        <button 
+          id="btnApplyFullAiSync" 
+          onclick="app.applyAiFullTranscriptSync()" 
+          class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
+        >
+          <i class="fa-solid fa-bolt text-amber-300"></i>
+          <span>Cập nhật</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: AI PROMPT HELPER & SENTENCE SEGMENTATION GUIDE             -->
+  <!-- ================================================================= -->
+  <div id="sentenceGuideModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-2xl rounded-3xl p-5 sm:p-7 border border-amber-200 shadow-2xl space-y-5 modal-content max-h-[90vh] overflow-y-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white text-lg shadow-md shadow-orange-500/20">
+            <i class="fa-solid fa-lightbulb text-amber-100"></i>
+          </div>
+          <div>
+            <h3 class="font-heading font-black text-base sm:text-lg text-slate-900 flex items-center gap-2">
+              <span>Mẹo Chia Câu & Cụm Từ Bằng AI</span>
+              <span class="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">ChatGPT • Gemini • Claude</span>
+            </h3>
+            <p class="text-xs text-slate-500">Sao chép prompt → nhờ AI chia cụm → chỉnh lại siêu nhanh trên app.</p>
+          </div>
+        </div>
+        <button onclick="app.closeSentenceGuideModal()" class="text-slate-400 hover:text-slate-900 p-1.5 rounded-xl hover:bg-slate-100 transition" title="Đóng">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Step 1: Copy Master Prompt with Active Clip Transcript -->
+      <div class="p-4 rounded-2xl bg-gradient-to-r from-amber-50/80 via-orange-50/60 to-amber-50/80 border border-amber-200 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
+            <span>Câu Prompt Mẫu & Lời Thoại Đoạn Đang Cắt:</span>
+          </span>
+          <span class="text-[11px] font-mono text-amber-700 font-bold" id="guideClipRangeBadge">Clip 00:24 - 00:54</span>
+        </div>
+
+        <div class="relative">
+          <textarea 
+            id="guidePromptTextarea" 
+            rows="6" 
+            readonly 
+            class="w-full p-3.5 bg-white border border-amber-300 rounded-xl text-xs text-slate-800 font-mono focus:outline-none select-all shadow-inner leading-relaxed"
+          ></textarea>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <button 
+            id="btnCopyGuidePrompt" 
+            onclick="app.copySentenceGuidePrompt()" 
+            class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 active:scale-95 transition flex items-center gap-2 cursor-pointer"
+          >
+            <i class="fa-solid fa-copy text-sm"></i>
+            <span id="btnCopyGuidePromptText">📋 1-Click Sao chép toàn bộ Prompt & Lời thoại</span>
+          </button>
+
+          <!-- Fast Links to AI Bots -->
+          <div class="flex items-center gap-1.5">
+            <span class="text-[11px] text-slate-500 font-medium">Mở bot:</span>
+            <a href="https://chatgpt.com" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition flex items-center gap-1 shadow-xs">
+              <i class="fa-solid fa-robot text-emerald-600 text-[10px]"></i>
+              <span>ChatGPT</span>
+            </a>
+            <a href="https://gemini.google.com" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition flex items-center gap-1 shadow-xs">
+              <i class="fa-solid fa-wand-magic-sparkles text-blue-600 text-[10px]"></i>
+              <span>Gemini</span>
+            </a>
+            <a href="https://claude.ai" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold transition flex items-center gap-1 shadow-xs">
+              <i class="fa-solid fa-brain text-amber-700 text-[10px]"></i>
+              <span>Claude</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Visual Guide for Manual Adjustment Tools -->
+      <div class="space-y-3">
+        <span class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+          <span class="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">2</span>
+          <span>Cách chỉnh lại câu trên LingoTube chỉ trong vài click:</span>
+        </span>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+          
+          <!-- Tool 1: Merge -->
+          <div class="p-3 bg-slate-50 hover:bg-blue-50/50 rounded-xl border border-slate-200 flex items-start gap-2.5 transition">
+            <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold shrink-0">
+              <i class="fa-solid fa-link text-xs"></i>
+            </div>
+            <div>
+              <strong class="text-slate-900 block text-xs">Nút Gộp [🔗]</strong>
+              <p class="text-[11px] text-slate-600 mt-0.5">Bấm vào biểu tượng xích để gộp câu bị ngắt đôi vào câu phía trên.</p>
+            </div>
+          </div>
+
+          <!-- Tool 2: Split -->
+          <div class="p-3 bg-slate-50 hover:bg-blue-50/50 rounded-xl border border-slate-200 flex items-start gap-2.5 transition">
+            <div class="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold shrink-0">
+              <i class="fa-solid fa-scissors text-xs"></i>
+            </div>
+            <div>
+              <strong class="text-slate-900 block text-xs">Nút Tách [✂️]</strong>
+              <p class="text-[11px] text-slate-600 mt-0.5">Bấm nút kéo trên câu → bấm vào từ muốn ngắt để tách câu ngay tại từ đó.</p>
+            </div>
+          </div>
+
+          <!-- Tool 3: Edit Text -->
+          <div class="p-3 bg-slate-50 hover:bg-blue-50/50 rounded-xl border border-slate-200 flex items-start gap-2.5 transition">
+            <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold shrink-0">
+              <i class="fa-solid fa-pen text-xs"></i>
+            </div>
+            <div>
+              <strong class="text-slate-900 block text-xs">Nút Sửa [✏️]</strong>
+              <p class="text-[11px] text-slate-600 mt-0.5">Bấm biểu tượng bút để thêm dấu chấm, dấu phẩy hoặc viết hoa chữ cái.</p>
+            </div>
+          </div>
+
+          <!-- Tool 4: Save -->
+          <div class="p-3 bg-slate-50 hover:bg-blue-50/50 rounded-xl border border-slate-200 flex items-start gap-2.5 transition">
+            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold shrink-0">
+              <i class="fa-solid fa-floppy-disk text-xs"></i>
+            </div>
+            <div>
+              <strong class="text-slate-900 block text-xs">Lưu Bản Sửa [💾]</strong>
+              <p class="text-[11px] text-slate-600 mt-0.5">Sau khi chỉnh xong, bấm nút xanh "Lưu bản sửa" để lưu vĩnh viễn.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <div class="pt-2 border-t border-slate-100 flex items-center justify-end">
+        <button 
+          onclick="app.closeSentenceGuideModal()" 
+          class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition active:scale-95"
+        >
+          <span>Đã Hiểu, Quay Lại Chỉnh Câu 🚀</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: EXPORT AUDIO MP3 (PODCAST & DOWNLOAD OPTIONS)              -->
+  <!-- ================================================================= -->
+  <div id="exportAudioModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-lg rounded-3xl p-5 sm:p-7 border border-emerald-200 shadow-2xl space-y-5 modal-content max-h-[92vh] overflow-y-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3.5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white text-lg shadow-md shadow-emerald-500/20">
+            <i class="fa-solid fa-podcast"></i>
+          </div>
+          <div>
+            <h3 class="font-heading font-black text-base sm:text-lg text-slate-900 flex items-center gap-2">
+              <span>Tải Audio MP3 Đoạn Clip</span>
+              <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Podcast Audio</span>
+            </h3>
+            <p class="text-xs text-slate-500" id="exportAudioClipSummary">Đoạn clip: 00:00.0 → 00:30.0 (30.0s)</p>
+          </div>
+        </div>
+        <button onclick="app.closeExportAudioModal()" class="text-slate-400 hover:text-slate-900 p-1.5 rounded-xl hover:bg-slate-100 transition" title="Đóng">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Info Banner -->
+      <div class="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs text-emerald-950 space-y-1">
+        <p class="font-bold flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-check text-emerald-600"></i>
+          <span>Âm thanh chất lượng cao 320kbps</span>
+        </p>
+        <p class="text-emerald-800 text-[11px]">
+          Bạn có thể tải file MP3 để nghe offline khi đi xe, chạy bộ hoặc nghe trực tiếp trên Web ở Chế độ Podcast để tiết kiệm 90% pin và dung lượng mạng.
+        </p>
+      </div>
+
+      <!-- Direct Video Link & 1-Click Copy -->
+      <div class="p-3 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 min-w-0 flex-1">
+          <i class="fa-brands fa-youtube text-red-500 text-sm shrink-0"></i>
+          <input 
+            type="text" 
+            id="exportAudioVideoUrlInput" 
+            readonly 
+            class="bg-transparent border-none text-xs text-slate-800 font-mono w-full focus:outline-none truncate select-all"
+            value="https://www.youtube.com/watch?v=..."
+          />
+        </div>
+        <button 
+          id="btnCopyExportVideoUrl" 
+          onclick="app.copyExportVideoUrl()" 
+          class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shrink-0 flex items-center gap-1.5 transition active:scale-95 shadow-xs cursor-pointer"
+        >
+          <i class="fa-solid fa-copy text-xs"></i>
+          <span id="btnCopyExportVideoUrlText">Sao chép link</span>
+        </button>
+      </div>
+
+      <!-- Download Options List -->
+      <div class="space-y-2.5">
+        
+        <!-- Option 1: Cobalt Tools (Cleanest, No ads) -->
+        <button 
+          onclick="app.downloadViaCobalt()" 
+          class="w-full p-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-between transition group shadow-md cursor-pointer text-left"
+        >
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-base">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+            <div>
+              <strong class="text-xs font-bold block text-white group-hover:text-emerald-300 transition">Tải Nhanh Qua Cobalt (Khuyên Dùng ⭐)</strong>
+              <span class="text-[11px] text-slate-400">Tự động nạp link, 0 quảng cáo, tải âm thanh 320kbps</span>
+            </div>
+          </div>
+          <i class="fa-solid fa-arrow-up-right-from-square text-xs text-slate-400 group-hover:text-white transition"></i>
+        </button>
+
+        <!-- Option 2: Y2Mate Backup -->
+        <button 
+          onclick="app.downloadViaY2Mate()" 
+          class="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-800 border border-slate-200 flex items-center justify-between transition group cursor-pointer text-left"
+        >
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-base">
+              <i class="fa-solid fa-download"></i>
+            </div>
+            <div>
+              <strong class="text-xs font-bold block text-slate-900 group-hover:text-blue-600 transition">Tải Qua Y2Mate / OnlyMP3 (Dự phòng)</strong>
+              <span class="text-[11px] text-slate-500">Tự động nạp link sang cổng tải dự phòng</span>
+            </div>
+          </div>
+          <i class="fa-solid fa-arrow-up-right-from-square text-xs text-slate-400 group-hover:text-slate-900 transition"></i>
+        </button>
+
+        <!-- Option 3: Listen directly on Podcast Mode -->
+        <button 
+          onclick="app.startPodcastModeFromModal()" 
+          class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white flex items-center justify-between transition group shadow-md cursor-pointer"
+        >
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-white/20 text-white flex items-center justify-center text-base">
+              <i class="fa-solid fa-headphones"></i>
+            </div>
+            <div class="text-left">
+              <strong class="text-xs font-bold block text-white">Nghe Trực Tiếp Trên Web (Chế Độ Podcast)</strong>
+              <span class="text-[11px] text-emerald-100">Chạy phụ đề Karaoke, lặp A-B, không cần tải về máy</span>
+            </div>
+          </div>
+          <i class="fa-solid fa-play text-xs text-emerald-200 group-hover:text-white transition"></i>
+        </button>
+
+      </div>
+
+      <!-- Action Button -->
+      <div class="pt-2 border-t border-slate-100 flex items-center justify-end">
+        <button 
+          onclick="app.closeExportAudioModal()" 
+          class="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition active:scale-95 cursor-pointer"
+        >
+          Đóng
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: MODULE 2 VẠCH LÁ TÌM SÂU AI ANALYSIS GUIDE & SYNC          -->
+  <!-- ================================================================= -->
+  <div id="vachLaAiSyncModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-3xl rounded-3xl p-5 sm:p-7 border border-indigo-200 shadow-2xl space-y-5 modal-content max-h-[92vh] overflow-y-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-base shadow-sm">
+            <i class="fa-solid fa-brain"></i>
+          </div>
+          <h3 class="font-heading font-bold text-base text-slate-900">
+            Phân Tích AI
+          </h3>
+        </div>
+        <button onclick="app.closeVachLaAiSyncModal()" class="text-slate-400 hover:text-slate-900 p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer" title="Đóng">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Step 1: Copy Master Analysis Prompt -->
+      <div class="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-900">
+            1. Sao chép Prompt
+          </span>
+          <span class="text-[11px] font-mono text-blue-700 font-bold" id="vachLaClipRangeBadge">Clip 00:00 - 00:21</span>
+        </div>
+
+        <div class="relative">
+          <textarea 
+            id="vachLaPromptTextarea" 
+            rows="5" 
+            readonly 
+            class="w-full p-3 bg-white border border-blue-200 rounded-xl text-xs text-slate-800 font-mono focus:outline-none select-all shadow-inner leading-relaxed"
+          ></textarea>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+          <button 
+            id="btnCopyVachLaPrompt" 
+            onclick="app.copyVachLaPrompt()" 
+            class="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <i class="fa-solid fa-copy text-xs"></i>
+            <span id="btnCopyVachLaPromptText">Sao chép</span>
+          </button>
+
+          <div class="flex items-center gap-1.5">
+            <a href="https://chatgpt.com" target="_blank" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition flex items-center gap-1 shadow-2xs">
+              <i class="fa-solid fa-robot text-emerald-600 text-[10px]"></i>
+              <span>ChatGPT</span>
+            </a>
+            <a href="https://gemini.google.com" target="_blank" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition flex items-center gap-1 shadow-2xs">
+              <i class="fa-solid fa-wand-magic-sparkles text-blue-600 text-[10px]"></i>
+              <span>Gemini</span>
+            </a>
+            <a href="https://claude.ai" target="_blank" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition flex items-center gap-1 shadow-2xs">
+              <i class="fa-solid fa-brain text-amber-700 text-[10px]"></i>
+              <span>Claude</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Paste AI Result -->
+      <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-900">
+            2. Dán kết quả AI
+          </span>
+          <button 
+            type="button" 
+            onclick="document.getElementById('inputPastedVachLaAnalysis').value = ''; document.getElementById('inputPastedVachLaAnalysis').focus();" 
+            class="text-[11px] text-slate-500 hover:text-rose-600 font-medium flex items-center gap-1 transition cursor-pointer"
+            title="Xóa sạch ô này để dán kết quả mới"
+          >
+            <i class="fa-regular fa-trash-can text-xs"></i>
+            <span>Xóa trắng</span>
+          </button>
+        </div>
+
+        <textarea 
+          id="inputPastedVachLaAnalysis" 
+          rows="6" 
+          placeholder="Dán kết quả từ ChatGPT / Gemini vào đây..." 
+          class="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 font-mono focus:outline-none focus:border-blue-500 shadow-inner leading-relaxed placeholder-slate-400 resize-y"
+        ></textarea>
+      </div>
+
+      <!-- Step 3: Apply Action -->
+      <div class="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100">
+        <button 
+          onclick="app.closeVachLaAiSyncModal()" 
+          class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition cursor-pointer"
+        >
+          Đóng
+        </button>
+        <button 
+          id="btnApplyVachLaAiSync" 
+          onclick="app.applyAiVachLaSync()" 
+          class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
+        >
+          <i class="fa-solid fa-bolt text-amber-300"></i>
+          <span>Cập nhật</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: MODULE 2 TRA CỨU TỪ CHƯA HIỂU & TƯ VẤN CỤM TỪ (MODAL 2)    -->
+  <!-- ================================================================= -->
+  <div id="customWordsModal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-3xl rounded-3xl p-5 sm:p-7 border border-amber-300 shadow-2xl space-y-5 modal-content max-h-[92vh] overflow-y-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white text-base shadow-sm">
+            <i class="fa-solid fa-plus-circle"></i>
+          </div>
+          <h3 class="font-heading font-bold text-base text-slate-900">
+            Tra Từ Chưa Hiểu
+          </h3>
+        </div>
+        <button onclick="app.closeCustomWordsModal()" class="text-slate-400 hover:text-slate-900 p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer" title="Đóng">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Input: Custom Words -->
+      <div class="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-300 text-xs text-amber-950 space-y-2">
+        <label for="customWordsInput" class="font-bold text-amber-900 block">
+          Nhập từ hoặc cụm từ cần tra:
+        </label>
+        <input 
+          type="text" 
+          id="customWordsInput" 
+          oninput="app.updateCustomWordsPrompt()" 
+          placeholder="Ví dụ: that is the things, welcome back, time..." 
+          class="w-full p-2.5 bg-white border border-amber-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-inner font-medium placeholder:text-slate-400"
+        />
+      </div>
+
+      <!-- Step 1: Copy Custom Words Master Prompt -->
+      <div class="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-300 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-900">
+            1. Sao chép Prompt
+          </span>
+          <span class="text-[11px] font-mono text-amber-800 font-bold" id="customWordsClipRangeBadge">Clip 00:00 - 00:21</span>
+        </div>
+
+        <div class="relative">
+          <textarea 
+            id="customWordsPromptTextarea" 
+            rows="5" 
+            readonly 
+            class="w-full p-3 bg-white border border-amber-300 rounded-xl text-xs text-slate-800 font-mono focus:outline-none select-all shadow-inner leading-relaxed"
+          ></textarea>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+          <button 
+            id="btnCopyCustomWordsPrompt" 
+            onclick="app.copyCustomWordsPrompt()" 
+            class="px-3.5 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-sm active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
+          >
+            <i class="fa-solid fa-copy text-xs"></i>
+            <span id="btnCopyCustomWordsPromptText">Sao chép</span>
+          </button>
+
+          <div class="flex items-center gap-1.5">
+            <a href="https://chatgpt.com" target="_blank" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition flex items-center gap-1 shadow-2xs">
+              <i class="fa-solid fa-robot text-emerald-600 text-[10px]"></i>
+              <span>ChatGPT</span>
+            </a>
+            <a href="https://gemini.google.com" target="_blank" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition flex items-center gap-1 shadow-2xs">
+              <i class="fa-solid fa-wand-magic-sparkles text-blue-600 text-[10px]"></i>
+              <span>Gemini</span>
+            </a>
+            <a href="https://claude.ai" target="_blank" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition flex items-center gap-1 shadow-2xs">
+              <i class="fa-solid fa-brain text-amber-700 text-[10px]"></i>
+              <span>Claude</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Paste AI Custom Words Result -->
+      <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-900">
+            2. Dán kết quả AI
+          </span>
+          <button 
+            type="button" 
+            onclick="document.getElementById('inputPastedCustomWordsAnalysis').value = ''; document.getElementById('inputPastedCustomWordsAnalysis').focus();" 
+            class="text-[11px] text-slate-500 hover:text-rose-600 font-medium flex items-center gap-1 transition cursor-pointer"
+            title="Xóa sạch ô này để dán kết quả mới"
+          >
+            <i class="fa-regular fa-trash-can text-xs"></i>
+            <span>Xóa trắng</span>
+          </button>
+        </div>
+
+        <textarea 
+          id="inputPastedCustomWordsAnalysis" 
+          rows="5" 
+          placeholder="Dán kết quả từ ChatGPT / Gemini vào đây..." 
+          class="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 font-mono focus:outline-none focus:border-orange-500 shadow-inner leading-relaxed placeholder-slate-400 resize-y"
+        ></textarea>
+      </div>
+
+      <!-- Step 3: Apply Action -->
+      <div class="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100">
+        <button 
+          onclick="app.closeCustomWordsModal()" 
+          class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition cursor-pointer"
+        >
+          Đóng
+        </button>
+        <button 
+          id="btnApplyCustomWordsAiSync" 
+          onclick="app.applyCustomWordsAiSync()" 
+          class="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-sm active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
+        >
+          <i class="fa-solid fa-plus-circle text-amber-200"></i>
+          <span>Bổ sung thẻ</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- TOAST NOTIFICATION CONTAINER                                      -->
+  <!-- ================================================================= -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- YouTube IFrame API Script -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <!-- Application Logic -->
+  <script src="js/app.js"></script>
+</body>
+</html>
