@@ -881,16 +881,19 @@ async function translateWithGoogle(text) {
   return clean;
 }
 
-// Global persistent in-memory & file-backed user database
-const USERS_DB_PATH = path.join(__dirname, 'users.json');
+// Global persistent in-memory & file-backed user database (Supports Vercel /tmp)
+const USERS_DB_PATH = process.env.VERCEL ? path.join('/tmp', 'lingotube_users.json') : path.join(__dirname, 'users.json');
 let usersCache = [];
-try {
-  if (fs.existsSync(USERS_DB_PATH)) {
-    usersCache = JSON.parse(fs.readFileSync(USERS_DB_PATH, 'utf8') || '[]');
-  }
-} catch (e) {
-  usersCache = [];
+
+function loadUsersFromDisk() {
+  try {
+    if (fs.existsSync(USERS_DB_PATH)) {
+      const raw = fs.readFileSync(USERS_DB_PATH, 'utf8');
+      if (raw) usersCache = JSON.parse(raw);
+    }
+  } catch (e) {}
 }
+loadUsersFromDisk();
 
 function saveUsersToDisk() {
   try {

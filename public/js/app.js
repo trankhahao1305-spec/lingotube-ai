@@ -306,6 +306,51 @@ class LingoTubeApp {
     }
   }
 
+  getUserPrefix() {
+    if (this.user && !this.user.isAnonymous) {
+      const cleanId = (this.user.uid || this.user.email || 'user').replace(/[^a-zA-Z0-9_-]/g, '_');
+      return `lingotube_user_${cleanId}`;
+    }
+    return 'lingotube_guest';
+  }
+
+  onUserChanged(newUser) {
+    this.user = newUser;
+    if (newUser) {
+      localStorage.setItem('lingotube_current_user', JSON.stringify(newUser));
+    } else {
+      localStorage.removeItem('lingotube_current_user');
+    }
+    this.updateAuthUI(this.user);
+    this.loadSavedClips();
+    this.loadRecentVideos();
+    this.loadStreakData();
+    this.loadGraduatedVideos();
+    this.loadVocabList();
+    this.renderRecentVideosList();
+    this.renderStreakUI();
+    this.updateSavedClipsBadge();
+    this.updateVocabStats();
+  }
+
+  loadVocabList() {
+    const key = `${this.getUserPrefix()}_vocab`;
+    try {
+      const rawVocab = JSON.parse(localStorage.getItem(key) || '[]');
+      this.vocabList = rawVocab.map(v => {
+        let interval = v.interval || 0;
+        let ef = v.easeFactor || 2.5;
+        if (interval > 60) interval = 14;
+        if (ef > 3.0) ef = 2.5;
+        return { ...v, interval, easeFactor: ef };
+      });
+      localStorage.setItem(key, JSON.stringify(this.vocabList));
+    } catch (e) {
+      this.vocabList = [];
+    }
+    this.updateVocabStats();
+  }
+
   /**
    * Extracts given first name without surname/middle name (e.g. "Trần Khả Hào" -> "Hào")
    */
@@ -743,13 +788,12 @@ class LingoTubeApp {
 
   loadRecentVideos() {
     try {
-      this.recentVideos = JSON.parse(localStorage.getItem('lingotube_recent_videos') || '[]');
-      if (this.recentVideos.length === 0) {
-        this.recentVideos = [
-          { id: 'UF8uR6Z6KLc', title: 'Steve Jobs Stanford Speech', channel: 'Stanford', timestamp: Date.now() - 100000 },
-          { id: 'Ks-_Mh1QhMc', title: 'TED Talk: Body Language', channel: 'Amy Cuddy', timestamp: Date.now() - 200000 }
-        ];
-        localStorage.setItem('lingotube_recent_videos', JSON.stringify(this.recentVideos));
+      const key = `${this.getUserPrefix()}_recent_videos`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        this.recentVideos = JSON.parse(raw);
+      } else {
+        this.recentVideos = [];
       }
       this.renderRecentVideosInSidebar();
     } catch (e) {
@@ -759,6 +803,7 @@ class LingoTubeApp {
 
   saveRecentVideo(video) {
     if (!video || !video.id) return;
+    const key = `${this.getUserPrefix()}_recent_videos`;
     this.recentVideos = (this.recentVideos || []).filter(v => v.id !== video.id);
     this.recentVideos.unshift({
       id: video.id,
@@ -769,7 +814,7 @@ class LingoTubeApp {
     if (this.recentVideos.length > 8) {
       this.recentVideos = this.recentVideos.slice(0, 8);
     }
-    localStorage.setItem('lingotube_recent_videos', JSON.stringify(this.recentVideos));
+    localStorage.setItem(key, JSON.stringify(this.recentVideos));
     this.renderRecentVideosInSidebar();
   }
 
@@ -6915,11 +6960,12 @@ ${linesList}
 
   saveGuestClip(clipData) {
     let list = [];
+    const key = `${this.getUserPrefix()}_clips`;
     try {
-      list = JSON.parse(localStorage.getItem('lingotube_guest_clips') || '[]');
+      list = JSON.parse(localStorage.getItem(key) || '[]');
     } catch (e) {}
     list.unshift(clipData);
-    localStorage.setItem('lingotube_guest_clips', JSON.stringify(list));
+    localStorage.setItem(key, JSON.stringify(list));
   }
 
   loadSavedClips() {
@@ -6929,7 +6975,8 @@ ${linesList}
     }
 
     try {
-      this.savedClips = JSON.parse(localStorage.getItem('lingotube_guest_clips') || '[]');
+      const key = `${this.getUserPrefix()}_clips`;
+      this.savedClips = JSON.parse(localStorage.getItem(key) || '[]');
       this.updateSavedClipsBadge();
     } catch (e) {
       this.savedClips = [];
@@ -7974,15 +8021,12 @@ ${linesList}
       if (authRes.ok) {
         const authData = await authRes.json();
         if (authData.success && authData.user) {
-          this.user = {
+          this.onUserChanged({
             uid: authData.user.uid,
             displayName: authData.user.displayName || email.split('@')[0],
             email: authData.user.email,
             isAnonymous: false
-          };
-
-          localStorage.setItem('lingotube_current_user', JSON.stringify(this.user));
-          this.updateAuthUI(this.user);
+          });
           this.closeAuthModal();
           this.showToast(`🎉 Đăng nhập thành công! Xin chào ${this.user.displayName}.`, 'success');
           this.syncAllDataToCloud();
@@ -8023,15 +8067,13 @@ ${linesList}
         return;
       }
 
-      this.user = {
+      this.onUserChanged({
         uid: user.uid,
         displayName: user.displayName || user.name || email.split('@')[0],
         email: user.email,
         isAnonymous: false
-      };
+      });
 
-      localStorage.setItem('lingotube_current_user', JSON.stringify(this.user));
-      this.updateAuthUI(this.user);
       this.closeAuthModal();
       this.showToast(`🎉 Đăng nhập thành công! Chào mừng ${this.user.displayName} quay trở lại.`, 'success');
       this.syncAllDataToCloud();
@@ -8103,21 +8145,22 @@ ${linesList}
       if (regRes.ok) {
         const regData = await regRes.json();
         if (regData.success && regData.user) {
-          this.user = {
+          const registeredUsers = JSON.parse(localStorage.getItem('lingotube_registered_users') || '[]');
+          registeredUsers.push({
+            uid: regData.user.uid,
+            displayName: regData.user.displayName || name || email.split('@')[0],
+            email: regData.user.email,
+            password
+          });
+          localStorage.setItem('lingotube_registered_users', JSON.stringify(registeredUsers));
+
+          this.onUserChanged({
             uid: regData.user.uid,
             displayName: regData.user.displayName || name || email.split('@')[0],
             email: regData.user.email,
             isAnonymous: false
-          };
+          });
 
-          localStorage.setItem('lingotube_current_user', JSON.stringify(this.user));
-          
-          // Also cache locally
-          const registeredUsers = JSON.parse(localStorage.getItem('lingotube_registered_users') || '[]');
-          registeredUsers.push({ ...this.user, password });
-          localStorage.setItem('lingotube_registered_users', JSON.stringify(registeredUsers));
-
-          this.updateAuthUI(this.user);
           this.closeAuthModal();
           this.showToast(`🎉 Tạo tài khoản thành công! Xin chào ${this.user.displayName}, toàn bộ từ vựng & bài học đã được lưu an toàn!`, 'success');
           this.syncAllDataToCloud();
@@ -8161,15 +8204,13 @@ ${linesList}
       registeredUsers.push(newUser);
       localStorage.setItem('lingotube_registered_users', JSON.stringify(registeredUsers));
 
-      this.user = {
+      this.onUserChanged({
         uid: newUser.uid,
         displayName: newUser.displayName,
         email: newUser.email,
         isAnonymous: false
-      };
+      });
 
-      localStorage.setItem('lingotube_current_user', JSON.stringify(this.user));
-      this.updateAuthUI(this.user);
       this.closeAuthModal();
       this.showToast(`🎉 Tạo tài khoản thành công! Xin chào ${this.user.displayName}, toàn bộ từ vựng & bài học đã được lưu an toàn!`, 'success');
       this.syncAllDataToCloud();
@@ -8247,16 +8288,14 @@ ${linesList}
     const email = emailPrompt.trim();
     const displayName = email.split('@')[0];
 
-    this.user = {
+    this.onUserChanged({
       uid: 'google_' + btoa(email).replace(/=/g, ''),
       displayName: displayName.charAt(0).toUpperCase() + displayName.slice(1),
       email: email,
       photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(email)}`,
       isAnonymous: false
-    };
+    });
 
-    localStorage.setItem('lingotube_current_user', JSON.stringify(this.user));
-    this.updateAuthUI(this.user);
     this.closeAuthModal();
     this.showToast(`🎉 Đăng nhập Google thành công! Xin chào ${this.user.displayName}.`, 'success');
     this.syncAllDataToCloud();
@@ -8268,11 +8307,9 @@ ${linesList}
         await this.auth.signOut();
       } catch (e) {}
     }
-    this.user = null;
-    localStorage.removeItem('lingotube_current_user');
+    this.onUserChanged(null);
     this.storageEngine = 'guest';
     localStorage.setItem('lingotube_storage_engine', 'guest');
-    this.updateAuthUI(null);
     this.showToast('👋 Đã đăng xuất tài khoản. Đang ở chế độ Khách.', 'info');
   }
 
@@ -8476,7 +8513,8 @@ ${linesList}
     };
 
     try {
-      const local = localStorage.getItem('lingotube_daily_streak_data');
+      const key = `${this.getUserPrefix()}_streak`;
+      const local = localStorage.getItem(key);
       this.streakData = local ? { ...defaultData, ...JSON.parse(local) } : defaultData;
     } catch (e) {
       this.streakData = defaultData;
@@ -8505,7 +8543,8 @@ ${linesList}
    */
   async saveStreakData() {
     if (!this.streakData) return;
-    localStorage.setItem('lingotube_daily_streak_data', JSON.stringify(this.streakData));
+    const key = `${this.getUserPrefix()}_streak`;
+    localStorage.setItem(key, JSON.stringify(this.streakData));
 
     if (this.storageEngine === 'firebase' && this.db && this.user) {
       try {
@@ -8592,13 +8631,12 @@ ${linesList}
   }
 
   /**
-   * Auto Check-in & Show Welcome Pop-up for logged in learners upon opening app / reloading
+   * Auto Check-in & Show Welcome Pop-up for learners upon opening app / reloading
    */
   async checkAndShowDailyWelcome() {
-    if (!this.user || this.user.isAnonymous) return;
-
     const today = this.getTodayDateString();
-    const alreadyShownKey = `lingotube_welcome_shown_${this.user.uid || this.user.email || 'user'}_${today}`;
+    const userKey = this.getUserPrefix();
+    const alreadyShownKey = `${userKey}_welcome_shown_${today}`;
     const alreadyShown = sessionStorage.getItem(alreadyShownKey);
 
     const isChecked = this.isTodayCheckedIn();
