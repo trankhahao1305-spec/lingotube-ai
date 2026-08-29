@@ -8607,23 +8607,18 @@ ${linesList}
    * Auto Check-in & Show Welcome Pop-up for learners upon opening app / reloading
    */
   async checkAndShowDailyWelcome() {
-    const today = this.getTodayDateString();
-    const userKey = this.getUserPrefix();
-    const alreadyShownKey = `${userKey}_welcome_shown_${today}`;
-    const alreadyShown = sessionStorage.getItem(alreadyShownKey);
-
     const isChecked = this.isTodayCheckedIn();
+    
+    // Flag to know if this was a fresh check-in just now
+    this._justCheckedIn = !isChecked;
 
     if (!isChecked) {
       // Auto check in silently
       await this.performDailyCheckIn(true);
-      sessionStorage.setItem(alreadyShownKey, 'true');
-      this.showDailyWelcomeModal();
-    } else if (!alreadyShown) {
-      // Already checked in today but opening app first time in this browser session
-      sessionStorage.setItem(alreadyShownKey, 'true');
-      this.showDailyWelcomeModal();
     }
+    
+    // Always show the modal for the demo
+    this.showDailyWelcomeModal();
   }
 
   showDailyWelcomeModal() {
@@ -8638,15 +8633,22 @@ ${linesList}
     const streakTextEl = document.getElementById('welcomeModalStreakText');
 
     if (titleEl) titleEl.textContent = `Chào mừng trở lại, ${shortName}! 👋`;
-    if (streakTextEl) streakTextEl.textContent = `Chuỗi ${streak} Ngày (+50 EXP)`;
+    
+    if (streakTextEl) {
+      if (this._justCheckedIn) {
+        streakTextEl.textContent = `Chuỗi ${streak} Ngày (+50 EXP)`;
+      } else {
+        streakTextEl.textContent = `Chuỗi ${streak} Ngày (Đã điểm danh)`;
+      }
+    }
 
     // Render 7-day strip
     this.renderWelcomeWeeklyDays();
 
     modal.classList.remove('hidden');
 
-    // Start auto-close 2.5s countdown
-    this.startWelcomeCountdown(2500);
+    // Start auto-close 4s countdown (slightly longer for video demo)
+    this.startWelcomeCountdown(4000);
   }
 
   renderWelcomeWeeklyDays() {

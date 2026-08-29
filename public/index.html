@@ -3354,6 +3354,56 @@
   </div>
 
   <!-- ================================================================= -->
+  <!-- MODAL: DAILY WELCOME / CHECK-IN STREAK                            -->
+  <!-- ================================================================= -->
+  <div id="dailyWelcomeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm hidden modal-overlay transition-opacity">
+    <div class="glass-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-6 relative overflow-hidden text-center border-2 border-emerald-100">
+      <div class="absolute top-0 left-0 w-full h-1 bg-slate-100"><div id="welcomeAutoCloseProgressBar" class="h-full bg-emerald-500 transition-all duration-50" style="width: 100%"></div></div>
+      <div class="flex flex-col items-center justify-center space-y-3 pt-2">
+        <div class="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center text-2xl shadow-sm">
+          <i class="fa-regular fa-calendar-check"></i>
+        </div>
+        <div class="space-y-1">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Phiên Luyện Hôm Nay</p>
+          <h3 id="welcomeModalGreetingTitle" class="text-xl font-bold text-slate-800 font-heading">Chào mừng trở lại! 👋</h3>
+          <p class="text-[13px] text-slate-600 font-medium">Hệ thống đã tự động điểm danh: <span id="welcomeModalStreakText" class="text-emerald-600 font-bold">Chuỗi 1 Ngày (+50 EXP)</span></p>
+        </div>
+      </div>
+      <div id="welcomeWeeklyCheckInDays" class="flex items-center justify-between gap-1 py-2 border-t border-b border-slate-100"></div>
+      <div class="space-y-3">
+        <p id="welcomeCountdownText" class="text-[11px] text-slate-400 font-medium">Tự động mở bài học sau 2 giây...</p>
+        <div class="flex items-center gap-3">
+          <button onclick="app.closeDailyWelcomeModal()" class="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-600/20 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-bolt text-amber-300"></i> Bắt đầu học ngay
+          </button>
+          <button onclick="app.closeDailyWelcomeModal()" class="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition active:scale-95 cursor-pointer">
+            Ở lại trang chủ
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="dailyCheckInModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-5 text-center border-2 border-orange-200 relative">
+      <button onclick="app.closeDailyCheckInModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-900 p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-amber-400 to-orange-500 text-white flex items-center justify-center text-3xl mx-auto shadow-lg shadow-orange-500/30 mb-2">
+        <i class="fa-solid fa-fire"></i>
+      </div>
+      <h3 class="text-xl font-bold text-slate-800 font-heading">Chuỗi Ngày Học</h3>
+      <div class="grid grid-cols-3 gap-2">
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-bold">Hiện tại</span><span id="modalCurrentStreakVal" class="text-lg font-black text-orange-600">0</span></div>
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-bold">Kỷ lục</span><span id="modalLongestStreakVal" class="text-lg font-black text-slate-700">0</span></div>
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-bold">Tổng EXP</span><span id="modalTotalExpVal" class="text-lg font-black text-blue-600">0</span></div>
+      </div>
+      <div id="modalWeeklyCheckInDaysContainer" class="flex items-center justify-between gap-1 py-2"></div>
+      <button id="btnModalPerformCheckIn" onclick="app.performDailyCheckIn()" class="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition flex items-center justify-center gap-2 shadow-md shadow-orange-500/25 cursor-pointer">
+        <span id="btnModalPerformCheckInText">Điểm danh ngay hôm nay (+50 EXP)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
   <!-- TOAST NOTIFICATION CONTAINER                                      -->
   <!-- ================================================================= -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
