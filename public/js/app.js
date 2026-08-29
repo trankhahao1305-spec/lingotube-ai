@@ -866,6 +866,10 @@ class LingoTubeApp {
 
   renderRecentVideosInSidebar() {
     const listEl = document.getElementById('sidebarRecentVideosList');
+    
+    // Also update landing page resume card
+    this.renderLandingRecentVideo();
+
     if (!listEl) return;
 
     if (!this.recentVideos || this.recentVideos.length === 0) {
@@ -881,6 +885,28 @@ class LingoTubeApp {
         </div>
       </div>
     `).join('');
+  }
+
+  renderLandingRecentVideo() {
+    const titleEl = document.getElementById('landingResumeTitle');
+    const cardEl = document.getElementById('landingResumeCard');
+    if (!titleEl || !cardEl) return;
+
+    if (!this.recentVideos || this.recentVideos.length === 0) {
+      titleEl.textContent = 'Chưa có bài học nào';
+      cardEl.style.opacity = '0.5';
+      cardEl.style.pointerEvents = 'none';
+    } else {
+      titleEl.textContent = this.recentVideos[0].title;
+      cardEl.style.opacity = '1';
+      cardEl.style.pointerEvents = 'auto';
+    }
+  }
+
+  loadLastRecentVideo() {
+    if (this.recentVideos && this.recentVideos.length > 0) {
+      this.loadVideoAndTranscript(this.recentVideos[0].id);
+    }
   }
 
   /**
