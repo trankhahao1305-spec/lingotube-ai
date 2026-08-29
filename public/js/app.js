@@ -214,7 +214,7 @@ class LingoTubeApp {
   initFirebase() {
     // LingoTube AI Production Firebase Config
     const config = {
-      apiKey: "AIzaSyD9Oh9IxxGzz-CztGRHlYmYU1rJ_bxlGSA",
+      apiKey: "AIzaSyD9Oh9IxxGzz-CztGRHLymYU1rJ_bxlGSA",
       authDomain: "lingotube-ai.firebaseapp.com",
       projectId: "lingotube-ai",
       storageBucket: "lingotube-ai.firebasestorage.app",
@@ -228,14 +228,26 @@ class LingoTubeApp {
       }
       this.auth = firebase.auth();
       this.db = firebase.firestore();
+      this.googleProvider = new firebase.auth.GoogleAuthProvider();
 
       this.auth.onAuthStateChanged((user) => {
+        const prevUser = this.user;
         this.user = user;
         this.updateAuthUI(user);
+        
         if (user && !user.isAnonymous) {
           this.storageEngine = 'firebase';
           localStorage.setItem('lingotube_storage_engine', 'firebase');
-          this.syncAllDataToCloud();
+          
+          // If we just logged in, check for data conflicts before syncing
+          if (!prevUser || prevUser.isAnonymous) {
+            this.checkDataSyncConflict(user);
+          } else {
+            this.syncAllDataToCloud();
+          }
+        } else {
+          this.storageEngine = 'guest';
+          localStorage.setItem('lingotube_storage_engine', 'guest');
         }
       });
     } catch (err) {
@@ -7997,6 +8009,110 @@ ${linesList}
 
   /**
    * Handle Email & Password Sign In
+  /**
+   * Data Conflict Resolution & Sync Logic
+   */
+  async checkDataSyncConflict(user) {
+    if (!this.db) return;
+    
+    // Check if there is any local data
+    const localClips = JSON.parse(localStorage.getItem('lingotube_saved_clips') || '[]');
+    const localVocab = JSON.parse(localStorage.getItem('lingotube_saved_vocab') || '[]');
+    const hasLocalData = localClips.length > 0 || localVocab.length > 0;
+
+    try {
+      const docRef = this.db.collection('users').doc(user.uid);
+      const docSnap = await docRef.get();
+      
+      const hasCloudData = docSnap.exists && (
+        (docSnap.data().bookmarks && docSnap.data().bookmarks.length > 0) || 
+        (docSnap.data().listeningProgress && docSnap.data().listeningProgress.length > 0)
+      );
+
+      if (hasLocalData && hasCloudData) {
+        // Conflict! Show modal.
+        document.getElementById('syncConflictModal').classList.remove('hidden');
+      } else if (hasCloudData && !hasLocalData) {
+        // Download from cloud quietly
+        await this.syncAllDataFromCloud();
+      } else {
+        // Upload to cloud quietly
+        this.syncAllDataToCloud();
+      }
+    } catch (err) {
+      console.error('Error checking sync conflict:', err);
+      this.syncAllDataToCloud(); // Fallback to push
+    }
+  }
+
+  async resolveSyncConflict(mode) {
+    document.getElementById('syncConflictModal').classList.add('hidden');
+    if (mode === 'overwrite') {
+      await this.syncAllDataFromCloud();
+      this.showToast('Đã tải dữ liệu từ Đám Mây thành công!', 'success');
+    } else if (mode === 'merge') {
+      // First download cloud data, then merge local, then upload combined.
+      await this.syncAllDataFromCloud(true); // true = merge mode
+      this.syncAllDataToCloud();
+      this.showToast('Đã gộp dữ liệu thành công!', 'success');
+    }
+  }
+
+  async syncAllDataFromCloud(merge = false) {
+    if (!this.db || !this.user || this.user.isAnonymous) return;
+    try {
+      const doc = await this.db.collection('users').doc(this.user.uid).get();
+      if (doc.exists) {
+        const data = doc.data();
+        
+        let newClips = [];
+        let newVocab = [];
+        
+        if (data.bookmarks) {
+          newClips = data.bookmarks.filter(b => b.type === 'clip');
+          newVocab = data.bookmarks.filter(b => b.type === 'vocab');
+        }
+        
+        if (merge) {
+          const localClips = JSON.parse(localStorage.getItem('lingotube_saved_clips') || '[]');
+          const localVocab = JSON.parse(localStorage.getItem('lingotube_saved_vocab') || '[]');
+          
+          // Deduplicate based on id
+          const clipMap = new Map();
+          localClips.forEach(c => clipMap.set(c.id, c));
+          newClips.forEach(c => clipMap.set(c.id, c));
+          newClips = Array.from(clipMap.values());
+          
+          const vocabMap = new Map();
+          localVocab.forEach(v => vocabMap.set(v.id, v));
+          newVocab.forEach(v => vocabMap.set(v.id, v));
+          newVocab = Array.from(vocabMap.values());
+        }
+
+        this.savedClips = newClips;
+        this.vocabList = newVocab;
+        
+        localStorage.setItem('lingotube_saved_clips', JSON.stringify(this.savedClips));
+        localStorage.setItem('lingotube_saved_vocab', JSON.stringify(this.vocabList));
+        
+        // Also map listeningProgress if needed...
+        if (data.listeningProgress) {
+          data.listeningProgress.forEach(p => {
+             if (p.completed) this.graduatedVideos[p.videoId] = true;
+          });
+          localStorage.setItem('lingotube_graduated_videos', JSON.stringify(this.graduatedVideos));
+        }
+
+        this.updateSavedClipsUI();
+        this.updateVocabStats();
+      }
+    } catch (err) {
+      console.error('Download sync error:', err);
+    }
+  }
+
+  /**
+   * Handle Email & Password Sign In
    */
   async handleEmailSignIn(event) {
     if (event) event.preventDefault();
@@ -8016,105 +8132,27 @@ ${linesList}
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Đang đăng nhập...</span>`;
     }
 
-    // 1. If Firebase Auth is initialized, try Firebase first
     if (this.auth) {
       try {
         await this.auth.signInWithEmailAndPassword(email, password);
-        this.showToast('🎉 Đăng nhập Firebase thành công! Dữ liệu đang được đồng bộ.', 'success');
+        this.showToast('🎉 Đăng nhập thành công!', 'success');
         this.closeAuthModal();
-        return;
       } catch (err) {
-        console.warn('Firebase sign in note:', err);
+        console.warn('Firebase sign in error:', err);
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+          this.showToast('Tài khoản hoặc mật khẩu không chính xác.', 'error');
+        } else {
+          this.showToast(`Lỗi: ${err.message}`, 'error');
+        }
       } finally {
         if (btn) {
           btn.disabled = false;
           btn.innerHTML = origHtml;
         }
       }
-    }
-
-    // 2. Cloud Server Auth Engine (Persists across Incognito, Mobile & All Browsers)
-    try {
-      const authRes = await fetch(`${this.apiBaseUrl}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      if (authRes.ok) {
-        const authData = await authRes.json();
-        if (authData.success && authData.user) {
-          this.onUserChanged({
-            uid: authData.user.uid,
-            displayName: authData.user.displayName || email.split('@')[0],
-            email: authData.user.email,
-            isAnonymous: false
-          });
-          if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = origHtml;
-          }
-          this.closeAuthModal();
-          this.showToast(`🎉 Đăng nhập thành công! Xin chào ${this.user.displayName}.`, 'success');
-          this.syncAllDataToCloud();
-          return;
-        }
-      } else {
-        const errData = await authRes.json().catch(() => ({}));
-        if (errData.error === 'not_found') {
-          this.showToast('Tài khoản email này chưa được đăng ký. Bạn hãy chọn tab Đăng Ký Mới.', 'warning');
-          this.switchAuthTab('signup');
-          const signUpEmail = document.getElementById('inputSignUpEmail');
-          if (signUpEmail) signUpEmail.value = email;
-          return;
-        } else if (errData.error === 'wrong_password') {
-          this.showToast('Mật khẩu không chính xác. Vui lòng kiểm tra lại.', 'error');
-          return;
-        }
-      }
-    } catch (apiErr) {
-      console.warn('Cloud login API fallback to local:', apiErr.message);
-    }
-
-    // 3. LocalStorage Fallback (Offline Mode)
-    try {
-      const registeredUsers = JSON.parse(localStorage.getItem('lingotube_registered_users') || '[]');
-      const user = registeredUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
-
-      if (!user) {
-        this.showToast('Tài khoản email này chưa được đăng ký. Bạn hãy chọn tab Đăng Ký Mới.', 'warning');
-        this.switchAuthTab('signup');
-        const signUpEmail = document.getElementById('inputSignUpEmail');
-        if (signUpEmail) signUpEmail.value = email;
-        return;
-      }
-
-      if (user.password && user.password !== password) {
-        this.showToast('Mật khẩu không chính xác. Vui lòng kiểm tra lại.', 'error');
-        return;
-      }
-
-      this.onUserChanged({
-        uid: user.uid,
-        displayName: user.displayName || user.name || email.split('@')[0],
-        email: user.email,
-        isAnonymous: false
-      });
-
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = origHtml;
-      }
-      this.closeAuthModal();
-      this.showToast(`🎉 Đăng nhập thành công! Chào mừng ${this.user.displayName} quay trở lại.`, 'success');
-      this.syncAllDataToCloud();
-    } catch (e) {
-      this.showToast(`Lỗi đăng nhập: ${e.message}`, 'error');
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = origHtml;
-      }
+    } else {
+      this.showToast('Hệ thống đang offline, vui lòng thử lại sau.', 'error');
+      if (btn) btn.disabled = false;
     }
   }
 
@@ -8145,203 +8183,85 @@ ${linesList}
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Đang tạo tài khoản...</span>`;
     }
 
-    // 1. If Firebase Auth is initialized, try Firebase first
     if (this.auth) {
       try {
         const res = await this.auth.createUserWithEmailAndPassword(email, password);
         if (res.user && name) {
           await res.user.updateProfile({ displayName: name });
         }
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = origHtml;
-        }
-        this.showToast(`🎉 Tạo tài khoản thành công! Xin chào ${name || 'bạn'}, dữ liệu đã được kết nối Đám mây.`, 'success');
+        this.showToast(`🎉 Tạo tài khoản thành công! Xin chào ${name || 'bạn'}.`, 'success');
         this.closeAuthModal();
-        return;
       } catch (err) {
-        console.warn('Firebase sign up note:', err);
+        console.warn('Firebase sign up error:', err);
+        if (err.code === 'auth/email-already-in-use') {
+          this.showToast('Email này đã được sử dụng. Vui lòng đăng nhập.', 'warning');
+          this.switchAuthTab('signin');
+          document.getElementById('inputSignInEmail').value = email;
+        } else {
+          this.showToast(`Lỗi: ${err.message}`, 'error');
+        }
       } finally {
         if (btn) {
           btn.disabled = false;
           btn.innerHTML = origHtml;
         }
       }
-    }
-
-    // 2. Cloud Server Registration (Persists across Incognito, Mobile & All Browsers)
-    try {
-      const regRes = await fetch(`${this.apiBaseUrl}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name })
-      });
-
-      if (regRes.ok) {
-        const regData = await regRes.json();
-        if (regData.success && regData.user) {
-          const registeredUsers = JSON.parse(localStorage.getItem('lingotube_registered_users') || '[]');
-          registeredUsers.push({
-            uid: regData.user.uid,
-            displayName: regData.user.displayName || name || email.split('@')[0],
-            email: regData.user.email,
-            password
-          });
-          localStorage.setItem('lingotube_registered_users', JSON.stringify(registeredUsers));
-
-          this.onUserChanged({
-            uid: regData.user.uid,
-            displayName: regData.user.displayName || name || email.split('@')[0],
-            email: regData.user.email,
-            isAnonymous: false
-          });
-
-          if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = origHtml;
-          }
-          this.closeAuthModal();
-          this.showToast(`🎉 Tạo tài khoản thành công! Xin chào ${this.user.displayName}, toàn bộ từ vựng & bài học đã được lưu an toàn!`, 'success');
-          this.syncAllDataToCloud();
-          return;
-        }
-      } else {
-        const errData = await regRes.json().catch(() => ({}));
-        if (errData.error === 'already_exists') {
-          this.showToast('Địa chỉ email này đã được sử dụng. Bạn hãy chọn tab Đăng Nhập.', 'warning');
-          this.switchAuthTab('signin');
-          const signInEmail = document.getElementById('inputSignInEmail');
-          if (signInEmail) signInEmail.value = email;
-          return;
-        }
-      }
-    } catch (apiErr) {
-      console.warn('Cloud register API fallback to local:', apiErr.message);
-    }
-
-    // 3. LocalStorage Fallback (Offline Mode)
-    try {
-      const registeredUsers = JSON.parse(localStorage.getItem('lingotube_registered_users') || '[]');
-      const existingUser = registeredUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
-
-      if (existingUser) {
-        this.showToast('Địa chỉ email này đã được sử dụng. Bạn hãy chọn tab Đăng Nhập.', 'warning');
-        this.switchAuthTab('signin');
-        const signInEmail = document.getElementById('inputSignInEmail');
-        if (signInEmail) signInEmail.value = email;
-        return;
-      }
-
-      const newUser = {
-        uid: 'user_' + Date.now(),
-        displayName: name || email.split('@')[0],
-        email: email,
-        password: password,
-        createdAt: new Date().toISOString()
-      };
-
-      registeredUsers.push(newUser);
-      localStorage.setItem('lingotube_registered_users', JSON.stringify(registeredUsers));
-
-      this.onUserChanged({
-        uid: newUser.uid,
-        displayName: newUser.displayName,
-        email: newUser.email,
-        isAnonymous: false
-      });
-
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = origHtml;
-      }
-      this.closeAuthModal();
-      this.showToast(`🎉 Tạo tài khoản thành công! Xin chào ${this.user.displayName}, toàn bộ từ vựng & bài học đã được lưu an toàn!`, 'success');
-      this.syncAllDataToCloud();
-    } catch (e) {
-      this.showToast(`Lỗi tạo tài khoản: ${e.message}`, 'error');
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = origHtml;
-      }
+    } else {
+      this.showToast('Hệ thống đang offline, vui lòng thử lại sau.', 'error');
+      if (btn) btn.disabled = false;
     }
   }
 
   /**
    * Password Reset Email
    */
-  async sendPasswordReset() {
-    if (this.auth) {
-      const email = document.getElementById('inputSignInEmail')?.value.trim() || prompt('Nhập địa chỉ email của bạn để nhận liên kết khôi phục mật khẩu:');
-      if (!email) return;
-
-      try {
-        await this.auth.sendPasswordResetEmail(email);
-        this.showToast('📧 Đã gửi email khôi phục mật khẩu! Vui lòng kiểm tra hộp thư đến của bạn.', 'success');
-        return;
-      } catch (err) {
-        this.showToast(`Không thể gửi email khôi phục: ${err.message}`, 'error');
-      }
+  async handleForgotPassword() {
+    if (!this.auth) return;
+    const email = document.getElementById('inputSignInEmail')?.value.trim() || prompt('Nhập địa chỉ email của bạn để nhận liên kết khôi phục mật khẩu:');
+    if (!email) {
+      this.showToast('Vui lòng nhập email vào ô Đăng nhập trước.', 'warning');
+      return;
     }
 
-    const email = document.getElementById('inputSignInEmail')?.value.trim() || prompt('Nhập địa chỉ email của bạn để lấy lại mật khẩu:');
-    if (!email) return;
-    const registeredUsers = JSON.parse(localStorage.getItem('lingotube_registered_users') || '[]');
-    const user = registeredUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
-    if (user && user.password) {
-      alert(`Mật khẩu của tài khoản ${user.email} là: ${user.password}`);
-    } else {
-      this.showToast('Không tìm thấy tài khoản với email này.', 'warning');
+    try {
+      await this.auth.sendPasswordResetEmail(email);
+      this.showToast('📧 Đã gửi email khôi phục mật khẩu! Vui lòng kiểm tra hộp thư đến.', 'success');
+    } catch (err) {
+      if (err.code === 'auth/user-not-found') {
+        this.showToast('Email này chưa được đăng ký trong hệ thống.', 'error');
+      } else {
+        this.showToast(`Lỗi: ${err.message}`, 'error');
+      }
+    }
+  }
+
+  /**
+   * Google Sign In (Handles account linking implicitly if enabled in console)
+   */
+  async handleGoogleSignIn() {
+    if (!this.auth) {
+      this.showToast('Chưa kết nối Firebase, không thể đăng nhập Google.', 'error');
+      return;
+    }
+    try {
+      await this.auth.signInWithPopup(this.googleProvider);
+      this.showToast('🎉 Đăng nhập Google thành công!', 'success');
+      this.closeAuthModal();
+    } catch (err) {
+      if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+        console.error('Google sign-in error:', err);
+        if (err.code === 'auth/account-exists-with-different-credential') {
+          this.showToast('Email này đã được đăng ký bằng Mật khẩu. Vui lòng đăng nhập bằng mật khẩu.', 'warning');
+        } else {
+          this.showToast(`Lỗi đăng nhập: ${err.message}`, 'error');
+        }
+      }
     }
   }
 
   async signInAnonymous() {
-    if (this.auth) {
-      try {
-        await this.auth.signInAnonymously();
-        this.showToast('Đang ở chế độ Khách (Lưu dữ liệu trên trình duyệt này).', 'info');
-      } catch (err) {
-        this.showToast(`Lỗi: ${err.message}`, 'error');
-      }
-    } else {
-      this.showToast('Đang ở chế độ Khách (Lưu dữ liệu trên trình duyệt này).', 'info');
-    }
     this.closeAuthModal();
-  }
-
-  async signInWithGoogle() {
-    if (this.auth) {
-      try {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        await this.auth.signInWithPopup(provider);
-        this.showToast('🎉 Đăng nhập Google thành công! Dữ liệu đã được kết nối Đám mây.', 'success');
-        this.closeAuthModal();
-        return;
-      } catch (err) {
-        if (err.code !== 'auth/popup-closed-by-user') {
-          console.warn('Google sign-in popup note:', err.message);
-        }
-      }
-    }
-
-    // Built-in Google Profile 1-Click login
-    const emailPrompt = prompt('Nhập địa chỉ Gmail của bạn để đăng nhập nhanh 1-click:', (this.user && this.user.email) || 'haotrankha53@gmail.com');
-    if (!emailPrompt) return;
-
-    const email = emailPrompt.trim();
-    const displayName = email.split('@')[0];
-
-    this.onUserChanged({
-      uid: 'google_' + btoa(email).replace(/=/g, ''),
-      displayName: displayName.charAt(0).toUpperCase() + displayName.slice(1),
-      email: email,
-      photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(email)}`,
-      isAnonymous: false
-    });
-
-    this.closeAuthModal();
-    this.showToast(`🎉 Đăng nhập Google thành công! Xin chào ${this.user.displayName}.`, 'success');
-    this.syncAllDataToCloud();
+    this.showToast('Đang sử dụng chế độ Khách (Lưu dữ liệu trên máy tính này).', 'info');
   }
 
   async signOut() {
@@ -8993,6 +8913,47 @@ ${linesList}
       toast.classList.add('opacity-0', 'translate-y-2');
       setTimeout(() => toast.remove(), 300);
     }, 3800);
+  }
+
+  async syncAllDataToCloud() {
+    if (!this.db || !this.user || this.user.isAnonymous) return;
+
+    try {
+      const localClips = JSON.parse(localStorage.getItem('lingotube_saved_clips') || '[]');
+      const localVocab = JSON.parse(localStorage.getItem('lingotube_saved_vocab') || '[]');
+      
+      const bookmarks = [];
+      localClips.forEach(clip => {
+        bookmarks.push({
+          type: 'clip',
+          ...clip
+        });
+      });
+      localVocab.forEach(vocab => {
+        bookmarks.push({
+          type: 'vocab',
+          ...vocab
+        });
+      });
+
+      const graduatedVideos = JSON.parse(localStorage.getItem('lingotube_graduated_videos') || '{}');
+      const listeningProgress = Object.keys(graduatedVideos).map(vid => ({
+        videoId: vid,
+        completed: true,
+        lastStudied: new Date().toISOString()
+      }));
+
+      await this.db.collection('users').doc(this.user.uid).set({
+        email: this.user.email,
+        bookmarks: bookmarks,
+        listeningProgress: listeningProgress,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+      console.log('Sync to cloud successful.');
+    } catch (err) {
+      console.error('Upload sync error:', err);
+    }
   }
 }
 

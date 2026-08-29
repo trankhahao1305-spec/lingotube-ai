@@ -2125,12 +2125,30 @@
             <h3 class="font-heading font-black text-base sm:text-lg text-slate-900 flex items-center gap-2">
               <span>Tài Khoản Học Tập</span>
             </h3>
-            <p class="text-xs text-slate-500">Lưu trữ từ vựng 3D, bài học và chuỗi Streak vĩnh viễn.</p>
+            <p class="text-[11px] text-slate-500 mt-0.5">Lưu trữ từ vựng 3D, bài học và chuỗi Streak vĩnh viễn.</p>
           </div>
         </div>
         <button onclick="app.closeAuthModal()" class="text-slate-400 hover:text-slate-900 p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer" title="Đóng">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
+      </div>
+
+      <!-- Google Sign-In Button (New) -->
+      <div class="pt-1">
+        <button 
+          type="button" 
+          onclick="app.handleGoogleSignIn()" 
+          class="w-full py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-sm shadow-sm transition active:scale-98 cursor-pointer flex items-center justify-center gap-3"
+        >
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-5 h-5" />
+          <span>Tiếp tục với Google</span>
+        </button>
+      </div>
+
+      <div class="flex items-center gap-3 text-xs text-slate-400 py-1">
+        <div class="flex-1 border-t border-slate-200"></div>
+        <span class="font-medium">HOẶC DÙNG EMAIL</span>
+        <div class="flex-1 border-t border-slate-200"></div>
       </div>
 
       <!-- Tab Switcher: Đăng Nhập vs Đăng Ký -->
@@ -2172,7 +2190,7 @@
         <div class="space-y-1 text-left">
           <div class="flex items-center justify-between">
             <label class="block text-[11px] font-bold text-slate-700">Mật khẩu:</label>
-            <button type="button" onclick="app.sendPasswordReset()" class="text-[10px] text-blue-600 hover:underline cursor-pointer">Quên mật khẩu?</button>
+            <button type="button" onclick="app.handleForgotPassword()" class="text-[10px] text-blue-600 hover:underline cursor-pointer font-semibold">Quên mật khẩu?</button>
           </div>
           <div class="relative">
             <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-xs"></i>
@@ -2186,7 +2204,7 @@
             <button 
               type="button" 
               onclick="app.togglePasswordVisibility('inputSignInPassword', 'iconSignInPassEye')" 
-              class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+              class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer p-1"
             >
               <i id="iconSignInPassEye" class="fa-regular fa-eye"></i>
             </button>
@@ -2196,7 +2214,7 @@
         <button 
           type="submit" 
           id="btnSubmitSignIn" 
-          class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+          class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-500/25 transition active:scale-98 cursor-pointer flex items-center justify-center gap-2 mt-2"
         >
           <i class="fa-solid fa-right-to-bracket"></i>
           <span>Đăng Nhập</span>
@@ -2212,7 +2230,7 @@
             <input 
               type="text" 
               id="inputSignUpName" 
-              placeholder="Trần Khả Hào" 
+              placeholder="Ví dụ: Nguyễn Văn A" 
               class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
               required 
             />
@@ -2226,7 +2244,7 @@
             <input 
               type="email" 
               id="inputSignUpEmail" 
-              placeholder="haotrankha53@gmail.com" 
+              placeholder="tenban@gmail.com" 
               class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition"
               required 
             />
@@ -2248,7 +2266,7 @@
             <button 
               type="button" 
               onclick="app.togglePasswordVisibility('inputSignUpPassword', 'iconSignUpPassEye')" 
-              class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer"
+              class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs cursor-pointer p-1"
             >
               <i id="iconSignUpPassEye" class="fa-regular fa-eye"></i>
             </button>
@@ -2258,7 +2276,7 @@
         <button 
           type="submit" 
           id="btnSubmitSignUp" 
-          class="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/25 transition active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+          class="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/25 transition active:scale-98 cursor-pointer flex items-center justify-center gap-2 mt-2"
         >
           <i class="fa-solid fa-user-plus"></i>
           <span>Tạo Tài Khoản & Lưu Dữ Liệu</span>
@@ -2266,27 +2284,64 @@
       </form>
 
       <!-- Footer: Guest mode option -->
-      <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-        <button 
-          type="button" 
-          onclick="app.signInAnonymous()" 
-          class="text-slate-500 hover:text-slate-800 text-[11px] font-medium flex items-center gap-1.5 cursor-pointer"
-        >
-          <i class="fa-solid fa-user-secret text-slate-400"></i>
-          <span>Dùng thử chế độ Khách (Lưu máy này)</span>
-        </button>
-
+      <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
         <button 
           type="button" 
           onclick="app.closeAuthModal()" 
-          class="text-slate-400 hover:text-slate-700 text-[11px]"
+          class="text-slate-500 hover:text-slate-800 text-[11px] font-medium flex items-center gap-1.5 cursor-pointer"
         >
-          Đóng
+          <i class="fa-solid fa-user-secret text-slate-400"></i>
+          <span>Dùng chế độ Khách (Lưu ở máy này)</span>
         </button>
       </div>
 
     </div>
   </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: DATA SYNC CONFLICT (MERGE OR OVERWRITE)                    -->
+  <!-- ================================================================= -->
+  <div id="syncConflictModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-md rounded-3xl p-6 sm:p-7 border border-blue-200 shadow-2xl space-y-4 text-center modal-content">
+      
+      <div class="w-14 h-14 mx-auto rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-2xl border border-blue-200 shadow-sm">
+        <i class="fa-solid fa-cloud-arrow-down"></i>
+      </div>
+      
+      <div class="space-y-1.5">
+        <h3 class="font-heading font-black text-lg text-slate-900">Phát hiện dữ liệu Đám Mây</h3>
+        <p class="text-xs text-slate-600 leading-relaxed px-2">
+          Tài khoản này đã có dữ liệu học tập trên Cloud. Bạn muốn tải dữ liệu về máy để học tiếp, hay gộp chung với những clip/từ vựng bạn vừa học ở máy này?
+        </p>
+      </div>
+
+      <div class="space-y-2.5 pt-3">
+        <button 
+          onclick="app.resolveSyncConflict('merge')"
+          class="w-full p-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-500/25 transition active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <i class="fa-solid fa-code-merge"></i>
+          <div class="text-left leading-tight">
+            <span class="block">Gộp Dữ Liệu (Merge)</span>
+            <span class="block text-[10px] font-normal opacity-90 mt-0.5">Giữ lại cả dữ liệu cũ trên Cloud và dữ liệu mới ở máy.</span>
+          </div>
+        </button>
+
+        <button 
+          onclick="app.resolveSyncConflict('overwrite')"
+          class="w-full p-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm border border-slate-200 transition active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <i class="fa-solid fa-cloud-arrow-down text-slate-500"></i>
+          <div class="text-left leading-tight">
+            <span class="block">Tải từ Đám mây (Overwrite)</span>
+            <span class="block text-[10px] font-normal text-slate-500 mt-0.5">Xóa dữ liệu máy này, tải dữ liệu trên Cloud về máy.</span>
+          </div>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
 
   <!-- ================================================================= -->
   <!-- MODAL: SPLIT SENTENCE (TÁCH CÂU PHỤ ĐỀ)                            -->
