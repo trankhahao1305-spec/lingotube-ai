@@ -8016,7 +8016,7 @@ ${linesList}
     if (!this.db) return;
     
     // Check if there is any local data
-    const localClips = JSON.parse(localStorage.getItem('lingotube_saved_clips') || '[]');
+    const localClips = JSON.parse(localStorage.getItem(this.getUserPrefix() + '_clips') || '[]');
     const localVocab = JSON.parse(localStorage.getItem('lingotube_saved_vocab') || '[]');
     const hasLocalData = localClips.length > 0 || localVocab.length > 0;
 
@@ -8061,51 +8061,50 @@ ${linesList}
   async syncAllDataFromCloud(merge = false) {
     if (!this.db || !this.user || this.user.isAnonymous) return;
     try {
-      const doc = await this.db.collection('users').doc(this.user.uid).get();
-      if (doc.exists) {
-        const data = doc.data();
-        
-        let newClips = [];
-        let newVocab = [];
-        
-        if (data.bookmarks) {
-          newClips = data.bookmarks.filter(b => b.type === 'clip');
-          newVocab = data.bookmarks.filter(b => b.type === 'vocab');
-        }
-        
-        if (merge) {
-          const localClips = JSON.parse(localStorage.getItem('lingotube_saved_clips') || '[]');
-          const localVocab = JSON.parse(localStorage.getItem('lingotube_saved_vocab') || '[]');
-          
-          // Deduplicate based on id
-          const clipMap = new Map();
-          localClips.forEach(c => clipMap.set(c.id, c));
-          newClips.forEach(c => clipMap.set(c.id, c));
-          newClips = Array.from(clipMap.values());
-          
-          const vocabMap = new Map();
-          localVocab.forEach(v => vocabMap.set(v.id, v));
-          newVocab.forEach(v => vocabMap.set(v.id, v));
-          newVocab = Array.from(vocabMap.values());
-        }
+      let newClips = [];
+      let newVocab = [];
+      let newGraduated = {};
 
-        this.savedClips = newClips;
-        this.vocabList = newVocab;
-        
-        localStorage.setItem('lingotube_saved_clips', JSON.stringify(this.savedClips));
-        localStorage.setItem('lingotube_saved_vocab', JSON.stringify(this.vocabList));
-        
-        // Also map listeningProgress if needed...
-        if (data.listeningProgress) {
-          data.listeningProgress.forEach(p => {
-             if (p.completed) this.graduatedVideos[p.videoId] = true;
-          });
-          localStorage.setItem('lingotube_graduated_videos', JSON.stringify(this.graduatedVideos));
-        }
+      const clipsSnap = await this.db.collection('users').doc(this.user.uid).collection('clips').get();
+      clipsSnap.forEach(doc => newClips.push(doc.data()));
 
-        this.updateSavedClipsUI();
-        this.updateVocabStats();
+      const vocabSnap = await this.db.collection('users').doc(this.user.uid).collection('vocab').get();
+      vocabSnap.forEach(doc => newVocab.push(doc.data()));
+
+      const gradDoc = await this.db.collection('users').doc(this.user.uid).collection('stats').doc('graduatedVideos').get();
+      if (gradDoc.exists) {
+        newGraduated = gradDoc.data();
       }
+
+      if (merge) {
+        const localClips = JSON.parse(localStorage.getItem(this.getUserPrefix() + '_clips') || '[]');
+        const localVocab = JSON.parse(localStorage.getItem('lingotube_saved_vocab') || '[]');
+        
+        const clipMap = new Map();
+        localClips.forEach(c => clipMap.set(c.clipId, c));
+        newClips.forEach(c => clipMap.set(c.clipId, c));
+        newClips = Array.from(clipMap.values());
+        
+        const vocabMap = new Map();
+        localVocab.forEach(v => vocabMap.set(v.id, v));
+        newVocab.forEach(v => vocabMap.set(v.id, v));
+        newVocab = Array.from(vocabMap.values());
+
+        const localGrad = JSON.parse(localStorage.getItem('lingotube_graduated_videos') || '{}');
+        newGraduated = { ...localGrad, ...newGraduated };
+      }
+
+      this.savedClips = newClips;
+      this.vocabList = newVocab;
+      this.allSavedVocab = newVocab;
+      this.graduatedVideos = newGraduated;
+      
+      localStorage.setItem(this.getUserPrefix() + '_clips', JSON.stringify(this.savedClips));
+      localStorage.setItem('lingotube_saved_vocab', JSON.stringify(this.vocabList));
+      localStorage.setItem('lingotube_graduated_videos', JSON.stringify(this.graduatedVideos));
+      
+      this.updateSavedClipsBadge();
+      this.updateVocabStats();
     } catch (err) {
       console.error('Download sync error:', err);
     }
@@ -8922,36 +8921,33 @@ ${linesList}
     if (!this.db || !this.user || this.user.isAnonymous) return;
 
     try {
-      const localClips = JSON.parse(localStorage.getItem('lingotube_saved_clips') || '[]');
+      const localClips = JSON.parse(localStorage.getItem(this.getUserPrefix() + '_clips') || '[]');
       const localVocab = JSON.parse(localStorage.getItem('lingotube_saved_vocab') || '[]');
       
-      const bookmarks = [];
+      const batch = this.db.batch();
+      const userRef = this.db.collection('users').doc(this.user.uid);
+      
       localClips.forEach(clip => {
-        bookmarks.push({
-          type: 'clip',
-          ...clip
-        });
+        const docRef = userRef.collection('clips').doc(clip.clipId);
+        batch.set(docRef, clip, { merge: true });
       });
+      
       localVocab.forEach(vocab => {
-        bookmarks.push({
-          type: 'vocab',
-          ...vocab
-        });
+        const docRef = userRef.collection('vocab').doc(vocab.id);
+        batch.set(docRef, vocab, { merge: true });
       });
 
       const graduatedVideos = JSON.parse(localStorage.getItem('lingotube_graduated_videos') || '{}');
-      const listeningProgress = Object.keys(graduatedVideos).map(vid => ({
-        videoId: vid,
-        completed: true,
-        lastStudied: new Date().toISOString()
-      }));
-
-      await this.db.collection('users').doc(this.user.uid).set({
+      if (Object.keys(graduatedVideos).length > 0) {
+        batch.set(userRef.collection('stats').doc('graduatedVideos'), graduatedVideos, { merge: true });
+      }
+      
+      batch.set(userRef, {
         email: this.user.email,
-        bookmarks: bookmarks,
-        listeningProgress: listeningProgress,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
+
+      await batch.commit();
 
       console.log('Sync to cloud successful.');
     } catch (err) {
