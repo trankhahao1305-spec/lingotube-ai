@@ -212,14 +212,17 @@ class LingoTubeApp {
    * Initialize Firebase SDK if config is present
    */
   initFirebase() {
-    const rawConfig = localStorage.getItem('lingotube_firebase_config');
-    if (!rawConfig) {
-      this.updateAuthUI(null);
-      return;
-    }
+    // LingoTube AI Production Firebase Config
+    const config = {
+      apiKey: "AIzaSyD9Oh9IxxGzz-CztGRHLymYU1rJ_bx1GSA",
+      authDomain: "lingotube-ai.firebaseapp.com",
+      projectId: "lingotube-ai",
+      storageBucket: "lingotube-ai.firebasestorage.app",
+      messagingSenderId: "371800275547",
+      appId: "1:371800275547:web:50494368228f637f4a1d7e"
+    };
 
     try {
-      const config = JSON.parse(rawConfig);
       if (!firebase.apps.length) {
         firebase.initializeApp(config);
       }
