@@ -112,7 +112,6 @@ class LingoTubeApp {
     await this.loadGraduatedVideos();
     this.setupEventListeners();
     this.updateStepperUI('trimmer');
-    this.loadRecentVideos();
     await this.loadStreakData();
 
     // Load initial vocab stats and sanitize legacy bloated intervals
@@ -243,11 +242,18 @@ class LingoTubeApp {
           if (!prevUser || prevUser.isAnonymous) {
             this.checkDataSyncConflict(user);
           } else {
-            this.syncAllDataToCloud();
+            // Already logged in (e.g. page reload) -> Load data from Cloud!
+            this.syncAllDataToCloud(); // Still sync guest data just in case
+            this.loadSavedClips();
+            this.loadGraduatedVideos();
+            this.setupTuVungWorkspace();
           }
         } else {
           this.storageEngine = 'guest';
           localStorage.setItem('lingotube_storage_engine', 'guest');
+          this.loadSavedClips();
+          this.loadGraduatedVideos();
+          this.setupTuVungWorkspace();
         }
       });
     } catch (err) {
@@ -8016,7 +8022,7 @@ ${linesList}
     if (!this.db) return;
     
     // Check if there is any local data
-    const localClips = JSON.parse(localStorage.getItem(this.getUserPrefix() + '_clips') || '[]');
+    const localClips = JSON.parse(localStorage.getItem('lingotube_guest_clips') || '[]');
     const localVocab = JSON.parse(localStorage.getItem('lingotube_saved_vocab') || '[]');
     const hasLocalData = localClips.length > 0 || localVocab.length > 0;
 
@@ -8077,7 +8083,7 @@ ${linesList}
       }
 
       if (merge) {
-        const localClips = JSON.parse(localStorage.getItem(this.getUserPrefix() + '_clips') || '[]');
+        const localClips = JSON.parse(localStorage.getItem('lingotube_guest_clips') || '[]');
         const localVocab = JSON.parse(localStorage.getItem('lingotube_saved_vocab') || '[]');
         
         const clipMap = new Map();
@@ -8921,7 +8927,7 @@ ${linesList}
     if (!this.db || !this.user || this.user.isAnonymous) return;
 
     try {
-      const localClips = JSON.parse(localStorage.getItem(this.getUserPrefix() + '_clips') || '[]');
+      const localClips = JSON.parse(localStorage.getItem('lingotube_guest_clips') || '[]');
       const localVocab = JSON.parse(localStorage.getItem('lingotube_saved_vocab') || '[]');
       
       const batch = this.db.batch();
