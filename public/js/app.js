@@ -214,7 +214,7 @@ class LingoTubeApp {
   initFirebase() {
     // LingoTube AI Production Firebase Config
     const config = {
-      apiKey: "AIzaSyD9Oh9IxxGzz-CztGRHLymYU1rJ_bxlGSA",
+      apiKey: "AIzaSyD9Oh9IxxGzz-CztGRHlYmYU1rJ_bxlGSA",
       authDomain: "lingotube-ai.firebaseapp.com",
       projectId: "lingotube-ai",
       storageBucket: "lingotube-ai.firebasestorage.app",
