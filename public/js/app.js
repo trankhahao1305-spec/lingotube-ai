@@ -315,22 +315,42 @@ class LingoTubeApp {
   }
 
   onUserChanged(newUser) {
-    this.user = newUser;
-    if (newUser) {
-      localStorage.setItem('lingotube_current_user', JSON.stringify(newUser));
-    } else {
-      localStorage.removeItem('lingotube_current_user');
+    try {
+      this.user = newUser;
+      if (newUser) {
+        localStorage.setItem('lingotube_current_user', JSON.stringify(newUser));
+      } else {
+        localStorage.removeItem('lingotube_current_user');
+      }
+      this.updateAuthUI(this.user);
+      this.loadSavedClips();
+      this.loadRecentVideos();
+      this.loadStreakData();
+      this.loadGraduatedVideos();
+      this.loadVocabList();
+      this.renderRecentVideosInSidebar();
+      this.renderStreakUI();
+      this.updateSavedClipsBadge();
+      this.updateVocabStats();
+    } catch (e) {
+      console.warn('onUserChanged sync note:', e);
     }
-    this.updateAuthUI(this.user);
-    this.loadSavedClips();
-    this.loadRecentVideos();
-    this.loadStreakData();
-    this.loadGraduatedVideos();
-    this.loadVocabList();
-    this.renderRecentVideosList();
-    this.renderStreakUI();
-    this.updateSavedClipsBadge();
-    this.updateVocabStats();
+  }
+
+  loadGraduatedVideos() {
+    const key = `${this.getUserPrefix()}_graduated_videos`;
+    try {
+      this.graduatedVideos = JSON.parse(localStorage.getItem(key) || '{}');
+    } catch (e) {
+      this.graduatedVideos = {};
+    }
+  }
+
+  saveGraduatedVideos() {
+    const key = `${this.getUserPrefix()}_graduated_videos`;
+    try {
+      localStorage.setItem(key, JSON.stringify(this.graduatedVideos || {}));
+    } catch (e) {}
   }
 
   loadVocabList() {
@@ -7903,7 +7923,7 @@ ${linesList}
     }
 
     const displayName = this.user.displayName || (this.user.email ? this.user.email.split('@')[0] : 'Learner');
-    const email = this.user.email || 'haotrankha53@gmail.com';
+    const email = this.user.email || 'learner@lingotube.ai';
     const photoURL = this.user.photoURL || '';
 
     const nameEl = document.getElementById('profileModalName');
@@ -8027,6 +8047,10 @@ ${linesList}
             email: authData.user.email,
             isAnonymous: false
           });
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+          }
           this.closeAuthModal();
           this.showToast(`🎉 Đăng nhập thành công! Xin chào ${this.user.displayName}.`, 'success');
           this.syncAllDataToCloud();
@@ -8074,6 +8098,10 @@ ${linesList}
         isAnonymous: false
       });
 
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
       this.closeAuthModal();
       this.showToast(`🎉 Đăng nhập thành công! Chào mừng ${this.user.displayName} quay trở lại.`, 'success');
       this.syncAllDataToCloud();
@@ -8121,6 +8149,10 @@ ${linesList}
         if (res.user && name) {
           await res.user.updateProfile({ displayName: name });
         }
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = origHtml;
+        }
         this.showToast(`🎉 Tạo tài khoản thành công! Xin chào ${name || 'bạn'}, dữ liệu đã được kết nối Đám mây.`, 'success');
         this.closeAuthModal();
         return;
@@ -8161,6 +8193,10 @@ ${linesList}
             isAnonymous: false
           });
 
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+          }
           this.closeAuthModal();
           this.showToast(`🎉 Tạo tài khoản thành công! Xin chào ${this.user.displayName}, toàn bộ từ vựng & bài học đã được lưu an toàn!`, 'success');
           this.syncAllDataToCloud();
@@ -8211,6 +8247,10 @@ ${linesList}
         isAnonymous: false
       });
 
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
       this.closeAuthModal();
       this.showToast(`🎉 Tạo tài khoản thành công! Xin chào ${this.user.displayName}, toàn bộ từ vựng & bài học đã được lưu an toàn!`, 'success');
       this.syncAllDataToCloud();
