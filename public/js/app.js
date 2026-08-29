@@ -237,13 +237,17 @@ class LingoTubeApp {
         if (user && !user.isAnonymous) {
           this.storageEngine = 'firebase';
           localStorage.setItem('lingotube_storage_engine', 'firebase');
+          localStorage.setItem('lingotube_current_user', JSON.stringify({
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            photoURL: user.photoURL
+          }));
           
-          // If we just logged in, check for data conflicts before syncing
           if (!prevUser || prevUser.isAnonymous) {
             this.checkDataSyncConflict(user);
           } else {
-            // Already logged in (e.g. page reload) -> Load data from Cloud!
-            this.syncAllDataToCloud(); // Still sync guest data just in case
+            this.syncAllDataToCloud(); 
             this.loadSavedClips();
             this.loadGraduatedVideos();
             this.setupTuVungWorkspace();
@@ -251,6 +255,7 @@ class LingoTubeApp {
         } else {
           this.storageEngine = 'guest';
           localStorage.setItem('lingotube_storage_engine', 'guest');
+          localStorage.removeItem('lingotube_current_user');
           this.loadSavedClips();
           this.loadGraduatedVideos();
           this.setupTuVungWorkspace();
@@ -8021,33 +8026,30 @@ ${linesList}
   async checkDataSyncConflict(user) {
     if (!this.db) return;
     
-    // Check if there is any local data
     const localClips = JSON.parse(localStorage.getItem('lingotube_guest_clips') || '[]');
     const localVocab = JSON.parse(localStorage.getItem('lingotube_saved_vocab') || '[]');
     const hasLocalData = localClips.length > 0 || localVocab.length > 0;
 
     try {
-      const docRef = this.db.collection('users').doc(user.uid);
-      const docSnap = await docRef.get();
-      
-      const hasCloudData = docSnap.exists && (
-        (docSnap.data().bookmarks && docSnap.data().bookmarks.length > 0) || 
-        (docSnap.data().listeningProgress && docSnap.data().listeningProgress.length > 0)
-      );
+      const clipsSnap = await this.db.collection('users').doc(user.uid).collection('clips').limit(1).get();
+      const vocabSnap = await this.db.collection('users').doc(user.uid).collection('vocab').limit(1).get();
+      const hasCloudData = !clipsSnap.empty || !vocabSnap.empty;
 
       if (hasLocalData && hasCloudData) {
-        // Conflict! Show modal.
         document.getElementById('syncConflictModal').classList.remove('hidden');
       } else if (hasCloudData && !hasLocalData) {
-        // Download from cloud quietly
         await this.syncAllDataFromCloud();
       } else {
-        // Upload to cloud quietly
-        this.syncAllDataToCloud();
+        await this.syncAllDataToCloud();
+        this.loadSavedClips();
+        this.loadGraduatedVideos();
+        this.setupTuVungWorkspace();
       }
     } catch (err) {
       console.error('Error checking sync conflict:', err);
-      this.syncAllDataToCloud(); // Fallback to push
+      this.syncAllDataToCloud(); 
+      this.loadSavedClips();
+      this.setupTuVungWorkspace();
     }
   }
 
