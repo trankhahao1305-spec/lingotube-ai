@@ -8188,6 +8188,9 @@ ${linesList}
         const res = await this.auth.createUserWithEmailAndPassword(email, password);
         if (res.user && name) {
           await res.user.updateProfile({ displayName: name });
+          // Force update local user object and UI so it doesn't fall back to email
+          this.user = this.auth.currentUser;
+          this.updateAuthUI(this.user);
         }
         this.showToast(`🎉 Tạo tài khoản thành công! Xin chào ${name || 'bạn'}.`, 'success');
         this.closeAuthModal();
