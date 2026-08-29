@@ -812,15 +812,14 @@
             </div>
             
             <div class="flex items-center gap-2 shrink-0">
-              <button 
-                onclick="app.onUserClickCompleteListenMode()" 
+              <div 
                 id="btnCompleteListenMode" 
-                class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 font-bold text-xs transition flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95"
-                title="Cần nghe lặp lại đủ 10 lần để hoàn thành đoạn clip"
+                class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 border border-slate-200 font-bold text-xs flex items-center gap-1.5 shadow-2xs select-none"
+                title="Nghe lặp lại đủ 10 lần để tự động hoàn thành"
               >
                 <i id="iconCompleteListenMode" class="fa-solid fa-lock text-slate-400 text-xs"></i>
                 <span id="textCompleteListenMode">0/10 lần</span>
-              </button>
+              </div>
             </div>
           </div>
 
@@ -963,15 +962,6 @@
                 <span>💡 Phân Tích AI</span>
               </button>
 
-              <!-- Complete Step 2 Button -->
-              <button 
-                onclick="app.completeVachLaMode()" 
-                id="btnCompleteVachLaMode" 
-                class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
-              >
-                <i class="fa-solid fa-circle-check text-blue-400 text-xs"></i>
-                <span>Hoàn thành</span>
-              </button>
             </div>
           </div>
 
@@ -1089,15 +1079,6 @@
                 </button>
               </div>
 
-              <!-- Complete Step 3 Button -->
-              <button 
-                onclick="app.completeTamSaoMode()" 
-                id="btnCompleteTamSaoMode" 
-                class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
-              >
-                <i class="fa-solid fa-circle-check text-blue-400 text-xs"></i>
-                <span>Hoàn thành</span>
-              </button>
             </div>
           </div>
 
@@ -1197,14 +1178,6 @@
                 <span>Clip: 00:00.0 → 00:00.0</span>
               </span>
 
-              <button 
-                onclick="app.completeShadowingMode()" 
-                id="btnCompleteShadowingMode" 
-                class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer active:scale-95"
-              >
-                <i class="fa-solid fa-circle-check text-blue-400 text-xs"></i>
-                <span>Hoàn thành</span>
-              </button>
             </div>
           </div>
 

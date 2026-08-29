@@ -1351,7 +1351,8 @@ class LingoTubeApp {
       const nextStep = this.coreSteps[currentIndex + 1];
       this.switchWorkspaceTab(nextStep);
     } else if (currentIndex === this.coreSteps.length - 1) {
-      this.showToast('🎉 Chúc mừng! Bạn đã hoàn thành 4 bước học cốt lõi. Hãy bấm [Shadowing] hoặc [Từ vựng] để mở rộng!', 'success');
+      this.switchWorkspaceTab('shadowing');
+      this.showToast('🎙️ Chuyển sang Phòng Shadowing!', 'info');
     } else {
       this.switchWorkspaceTab('trimmer');
     }
@@ -1412,7 +1413,7 @@ class LingoTubeApp {
     }
     if (btnNext && btnNextText) {
       if (coreIdx === 3) {
-        btnNextText.textContent = 'Hoàn thành 🎉';
+        btnNextText.textContent = 'Tiếp: Shadowing';
       } else if (coreIdx >= 0) {
         btnNextText.textContent = `Tiếp: ${currentMeta.nextName}`;
       } else {
@@ -1914,6 +1915,11 @@ class LingoTubeApp {
     } finally {
       btn.disabled = false;
       btn.innerHTML = originalBtnHtml;
+      
+      // Auto-complete if it's the final sentence
+      if (this.shadowingCurrentIndex === this.shadowingSentences.length - 1) {
+        this.completeShadowingMode();
+      }
     }
   }
 
@@ -2018,7 +2024,7 @@ class LingoTubeApp {
    */
   async completeShadowingMode() {
     const btn = document.getElementById('btnCompleteShadowingMode');
-    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Saving...</span>`;
+    if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Saving...</span>`;
 
     try {
       const matchingClip = this.savedClips.find(c => c.videoId === this.currentVideoId && Math.abs(c.startTime - this.clipRange.start) < 1);
@@ -2239,6 +2245,9 @@ class LingoTubeApp {
     const url = `https://youglish.com/pronounce/${cleanPhrase}/${accent}`;
     window.open(url, '_blank', 'noopener,noreferrer');
     this.showToast(`Đang mở YouGlish (${accent.toUpperCase()}) cho cụm: "${phrase}"`, 'info');
+    
+    // Tự động hoàn thành Bước 3 khi tra cứu YouGlish
+    this.completeTamSaoMode();
   }
 
   /**
@@ -2246,7 +2255,7 @@ class LingoTubeApp {
    */
   async completeTamSaoMode() {
     const btn = document.getElementById('btnCompleteTamSaoMode');
-    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Saving...</span>`;
+    if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Saving...</span>`;
 
     try {
       const matchingClip = this.savedClips.find(c => c.videoId === this.currentVideoId && Math.abs(c.startTime - this.clipRange.start) < 1);
@@ -2933,12 +2942,14 @@ Return ONLY a valid JSON object with the following schema:
   /**
    * Phase 4 helper & Phase 3 integration: Open YouGlish in new tab per spec
    */
-  openYouGlish(phrase) {
+  openYouGlish(phrase, customAccent) {
     if (!phrase) return;
     const cleanPhrase = encodeURIComponent(phrase.trim());
-    const url = `https://youglish.com/pronounce/${cleanPhrase}/english`;
+    const accent = customAccent || this.currentAccent || 'english';
+    const url = `https://youglish.com/pronounce/${cleanPhrase}/${accent}`;
     window.open(url, '_blank', 'noopener,noreferrer');
-    this.showToast(`Đang mở YouGlish cho cụm: "${phrase}"`, 'info');
+    this.showToast(`Đang mở YouGlish (${accent.toUpperCase()}) cho cụm: "${phrase}"`, 'info');
+    this.completeTamSaoMode();
   }
 
   /**
@@ -3006,6 +3017,9 @@ Return ONLY a valid JSON object with the following schema:
     if (this.activeTab === 'tuVung') {
       this.setupTuVungWorkspace();
     }
+    
+    // Tự động hoàn thành Bước 3 khi lưu từ vựng
+    this.completeTamSaoMode();
   }
 
   /**
@@ -3914,7 +3928,7 @@ Return ONLY a valid JSON object with the following schema:
    */
   async completeVachLaMode() {
     const btn = document.getElementById('btnCompleteVachLaMode');
-    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Saving...</span>`;
+    if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Saving...</span>`;
 
     try {
       const matchingClip = this.savedClips.find(c => c.videoId === this.currentVideoId && Math.abs(c.startTime - this.clipRange.start) < 1);
@@ -6372,6 +6386,7 @@ ${linesList}
 
       this.closeVachLaAiSyncModal();
       this.showToast(`🎉 Đã cập nhật thành công phân tích cho toàn bộ ${parsedSentences.length} câu!`, 'success');
+      this.completeVachLaMode();
     } catch (err) {
       console.error('Error applying Vach La AI sync:', err);
       this.showToast(`Lỗi phân tích: ${err.message}`, 'error');
