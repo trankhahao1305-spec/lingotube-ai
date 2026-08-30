@@ -1132,12 +1132,12 @@ class LingoTubeApp {
     if (placeholder) placeholder.classList.add('hidden');
     if (container) container.classList.remove('hidden');
 
-    if (this.ytPlayer && typeof this.ytPlayer.loadVideoById === 'function') {
+    if (this.ytPlayer && typeof this.ytPlayer.cueVideoById === 'function') {
       try {
-        this.ytPlayer.loadVideoById(videoId);
+        this.ytPlayer.cueVideoById(videoId);
         return;
       } catch (e) {
-        console.warn('Could not call loadVideoById, recreating player:', e);
+        console.warn('Could not call cueVideoById, recreating player:', e);
       }
     }
 
@@ -1157,6 +1157,7 @@ class LingoTubeApp {
       width: '100%',
       videoId: videoId,
       playerVars: {
+        autoplay: 0,
         playsinline: 1,
         rel: 0,
         modestbranding: 1,
@@ -4357,7 +4358,16 @@ Return ONLY a valid JSON object with the following schema:
     this.updateListenAudioOffsetUI();
     this.renderListenSentences();
     this.loadListenReplayCount();
-    this.listenReplayFromStart(false);
+    if (this.ytPlayer && typeof this.ytPlayer.seekTo === 'function') {
+      const offset = this.listenAudioOffset || 0;
+      const clipStart = Math.max(0, this.clipRange.start + offset);
+      this.ytPlayer.seekTo(clipStart, true);
+      if (typeof this.ytPlayer.pauseVideo === 'function') {
+        this.ytPlayer.pauseVideo();
+      }
+    }
+    this.isPlaying = false;
+    this.updateListenPlayBtn(false);
   }
 
   /**
@@ -4493,20 +4503,30 @@ Return ONLY a valid JSON object with the following schema:
    */
   listenTogglePlay() {
     if (!this.ytPlayer || !this.isPlayerReady) return;
+    
+    // Check real YouTube player state if available
+    let isCurrentlyPlaying = this.isPlaying;
+    if (typeof this.ytPlayer.getPlayerState === 'function') {
+      const state = this.ytPlayer.getPlayerState();
+      isCurrentlyPlaying = (state === 1 || state === 3); // 1: PLAYING, 3: BUFFERING
+    }
+
     const curr = this.ytPlayer.getCurrentTime() || 0;
     const clipStart = this.clipRange.start;
     const baseDuration = Math.max(1, this.clipRange.end - this.clipRange.start);
     const clipTotal = Math.max(1, baseDuration + (this.listenAudioDurationTrim || 0));
     const clipEnd = clipStart + clipTotal;
 
-    if (this.isPlaying) {
+    if (isCurrentlyPlaying) {
       this.ytPlayer.pauseVideo();
+      this.isPlaying = false;
       this.updateListenPlayBtn(false);
     } else {
       if (curr < clipStart || curr >= clipEnd) {
         this.ytPlayer.seekTo(clipStart, true);
       }
       this.ytPlayer.playVideo();
+      this.isPlaying = true;
       this.updateListenPlayBtn(true);
     }
   }
@@ -4798,10 +4818,19 @@ Return ONLY a valid JSON object with the following schema:
    */
   togglePlayPause() {
     if (!this.ytPlayer || !this.isPlayerReady) return;
-    if (this.isPlaying) {
+    let isCurrentlyPlaying = this.isPlaying;
+    if (typeof this.ytPlayer.getPlayerState === 'function') {
+      const state = this.ytPlayer.getPlayerState();
+      isCurrentlyPlaying = (state === 1 || state === 3);
+    }
+    if (isCurrentlyPlaying) {
       this.ytPlayer.pauseVideo();
+      this.isPlaying = false;
+      this.updateListenPlayBtn(false);
     } else {
       this.ytPlayer.playVideo();
+      this.isPlaying = true;
+      this.updateListenPlayBtn(true);
     }
   }
 
@@ -4812,15 +4841,19 @@ Return ONLY a valid JSON object with the following schema:
     this.ytPlayer.seekTo(target, true);
   }
 
-  seekTo(seconds, autoPlay = true) {
+  seekTo(seconds, autoPlay = false) {
     if (!this.ytPlayer || !this.isPlayerReady) return;
     this.ytPlayer.seekTo(seconds, true);
     if (autoPlay) {
       this.ytPlayer.playVideo();
+      this.isPlaying = true;
+      this.updateListenPlayBtn(true);
     } else {
       if (typeof this.ytPlayer.pauseVideo === 'function') {
         this.ytPlayer.pauseVideo();
       }
+      this.isPlaying = false;
+      this.updateListenPlayBtn(false);
     }
   }
 
