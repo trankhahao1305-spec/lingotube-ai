@@ -5411,6 +5411,7 @@ ${rawTranscriptContent}
 --- YÊU CẦU XỬ LÝ QUAN TRỌNG: ---
 1. ✂️ QUY TẮC NGẮT DÒNG THEO MỆNH ĐỀ & DẤU PHẨY:
    - Cứ hết một mệnh đề có dấu phẩy (,) hoặc hết câu có dấu chấm (. ? !) thì xuống dòng mới.
+   - Mỗi câu/mệnh đề nằm trọn vẹn trên 1 DÒNG DUY NHẤT bắt đầu bằng mốc thời gian.
    - Giữ nguyên vẹn cụm từ có nghĩa, không ngắt vụn giữa chừng.
 2. ⏱️ KÈM MỐC THỜI GIAN CHUẨN XÁC THEO AUDIO VIDEO:
    - Đầu mỗi dòng bắt buộc có mốc thời gian [phút:giây - phút:giây] khớp chính xác với thời gian diễn giả nói mệnh đề đó trong video (dựa vào audio video và phụ đề gốc).
@@ -5418,7 +5419,7 @@ ${rawTranscriptContent}
    - Viết hoa đầu câu, thêm dấu phẩy, chấm, ngoặc kép đầy đủ, giữ nguyên 100% từ ngữ của người nói.
 
 --- YÊU CẦU ĐẦU RA ---
-- Chỉ có các mẫu phụ đề video theo đúng mốc thời gian từ đầu đến hết video.
+- Chỉ xuất ra danh sách các dòng phụ đề theo đúng mốc thời gian từ đầu đến hết video.
 - Không bao gồm link video, lời chào hoặc giải thích ngoài lề trong câu trả lời.
 
 --- ĐỊNH DẠNG ĐẦU RA MẪU: ---
@@ -5484,7 +5485,7 @@ ${rawTranscriptContent}
    */
   parseTimestampToSeconds(tsStr) {
     if (!tsStr) return null;
-    tsStr = tsStr.trim().replace(/[sS]$/, '');
+    tsStr = tsStr.trim().replace(/[sS]$/, '').replace(',', '.');
     if (tsStr.includes(':')) {
       const parts = tsStr.split(':');
       if (parts.length === 2) {
@@ -5498,7 +5499,7 @@ ${rawTranscriptContent}
   }
 
   /**
-   * Parse Pasted AI Sentences and Perform Word-Level Timeline Synchronization
+   * Parse Pasted AI Sentences and Perform Timeline Synchronization
    */
   async applyAiFullTranscriptSync() {
     const textarea = document.getElementById('inputPastedAiTranscript');
@@ -5506,11 +5507,6 @@ ${rawTranscriptContent}
 
     if (!rawInput) {
       this.showToast('Vui lòng dán nội dung phụ đề từ AI vào ô trước khi áp dụng.', 'warning');
-      return;
-    }
-
-    if (!this.fullTranscript || this.fullTranscript.length === 0) {
-      this.showToast('Không có phụ đề gốc để đồng bộ thời gian.', 'error');
       return;
     }
 
@@ -5529,28 +5525,27 @@ ${rawTranscriptContent}
       for (let line of rawLines) {
         line = line.trim();
         if (!line) continue;
-        if (line.startsWith('```') || line.toLowerCase().includes('here is') || line.toLowerCase().includes('danh sách') || line.toLowerCase().includes('phụ đề đã')) continue;
+        if (line.startsWith('```') || line.toLowerCase().includes('here is') || line.toLowerCase().includes('danh sách') || line.toLowerCase().includes('phụ đề đã') || line.toLowerCase().includes('định dạng đầu ra') || line.toLowerCase().includes('link video:')) continue;
 
-        // Clean leading line numbering if present e.g. "1. ", "#1 "
+        // Clean leading line numbering if present e.g. "1. ", "#1 ", "- "
         let clean = line.replace(/^(?:#?\d+[\.\:\)\-]?|\-|\*|•)\s*/, '').trim();
 
-        // Check for timestamp patterns e.g. [00:00.2 - 00:03.5] or (00:00 - 00:03) or 00:00 - 00:03:
-        const tsMatch = clean.match(/^(?:\[|\()?([\d:\.]+)\s*[-–—]\s*([\d:\.]+)(?:\]|\))?[:\s-]*(.*)$/);
+        // Regex supporting: [00:00.0 - 00:01.2], (00:00.0 - 00:01.2), 00:00.0 - 00:01.2:, etc. (with . or ,)
+        const tsMatch = clean.match(/^(?:\[|\()?([\d:\.,]+)\s*[-–—]\s*([\d:\.,]+)(?:\]|\))?[:\s-]*(.*)$/);
         if (tsMatch) {
           const sT = this.parseTimestampToSeconds(tsMatch[1]);
           const eT = this.parseTimestampToSeconds(tsMatch[2]);
           const text = tsMatch[3].trim();
-          if (text) {
-            parsedItems.push({
-              explicitStart: sT,
-              explicitEnd: eT,
-              text: text
-            });
-            continue;
-          }
-        }
-
-        if (clean.length > 0) {
+          parsedItems.push({
+            explicitStart: sT,
+            explicitEnd: eT,
+            text: text
+          });
+        } else if (parsedItems.length > 0 && clean.length > 0) {
+          // If this line does not have a timestamp, it is a continuation of the previous line
+          const lastItem = parsedItems[parsedItems.length - 1];
+          lastItem.text = (lastItem.text ? lastItem.text + ' ' : '') + clean;
+        } else if (clean.length > 0) {
           parsedItems.push({
             explicitStart: null,
             explicitEnd: null,
@@ -5559,108 +5554,77 @@ ${rawTranscriptContent}
         }
       }
 
-      if (parsedItems.length === 0) {
-        throw new Error('Không trích xuất được câu nào từ nội dung dán vào.');
+      // Filter out empty items
+      const validItems = parsedItems.filter(item => item.text && item.text.trim().length > 0);
+
+      if (validItems.length === 0) {
+        throw new Error('Không trích xuất được câu nào từ nội dung dán vào. Vui lòng kiểm tra lại định dạng mốc thời gian.');
       }
 
-      // 3. Timeline Interpolator & Alignment Engine
-      const baseTranscript = (this.originalTranscript && this.originalTranscript.length > 0) ? this.originalTranscript : this.fullTranscript;
-      const origWords = [];
-      baseTranscript.forEach(seg => {
-        const segWords = seg.text.trim().split(/\s+/).filter(Boolean);
-        const segDur = Math.max(0.2, (seg.endTime || 0) - (seg.startTime || 0));
-        const wordDur = segDur / Math.max(1, segWords.length);
-        segWords.forEach((w, wIdx) => {
-          origWords.push({
-            word: w.toLowerCase().replace(/[^a-z0-9]/g, ''),
-            rawWord: w,
-            time: Number(((seg.startTime || 0) + wIdx * wordDur).toFixed(2))
-          });
-        });
-      });
-
-      const totalOrigDuration = this.videoDuration || (baseTranscript[baseTranscript.length - 1]?.endTime || 100);
-      const totalParsedChars = parsedItems.reduce((acc, it) => acc + it.text.length, 0) || 1;
-
-      let currentWordCursor = 0;
-      let cumulativeChars = 0;
+      const totalOrigDuration = this.videoDuration || (this.fullTranscript && this.fullTranscript.length > 0 ? this.fullTranscript[this.fullTranscript.length - 1]?.endTime : 100) || 100;
       let lastEndTime = 0;
-
       const syncedSentences = [];
 
-      parsedItems.forEach((item, lineIdx) => {
-        const lineText = item.text;
+      validItems.forEach((item, lineIdx) => {
         let startT = item.explicitStart;
         let endT = item.explicitEnd;
 
-        // If no explicit timestamps, use alignment
-        if (startT === null || endT === null || isNaN(startT) || isNaN(endT)) {
-          const lineWords = lineText.trim().split(/\s+/).filter(Boolean);
-          const lineFirstWord = (lineWords[0] || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-
-          // Try exact word match lookup near cursor
-          if (origWords.length > 0 && currentWordCursor < origWords.length) {
-            let foundStartIdx = -1;
-            for (let i = currentWordCursor; i < Math.min(origWords.length, currentWordCursor + 25); i++) {
-              if (origWords[i].word && (origWords[i].word === lineFirstWord || lineFirstWord.startsWith(origWords[i].word))) {
-                foundStartIdx = i;
-                break;
-              }
-            }
-
-            if (foundStartIdx !== -1) {
-              startT = origWords[foundStartIdx].time;
-              currentWordCursor = foundStartIdx + lineWords.length;
-              const endWordIdx = Math.min(origWords.length - 1, currentWordCursor - 1);
-              endT = origWords[endWordIdx].time + 1.0;
-            }
-          }
-
-          // Fallback to proportional interpolation
-          if (startT === null || isNaN(startT) || startT < lastEndTime) {
-            const charRatio = cumulativeChars / totalParsedChars;
-            startT = Math.max(lastEndTime, Number((charRatio * totalOrigDuration).toFixed(1)));
-          }
-
-          cumulativeChars += lineText.length;
-          const nextCharRatio = cumulativeChars / totalParsedChars;
-          const estEndT = Number((nextCharRatio * totalOrigDuration).toFixed(1));
-
-          if (endT === null || isNaN(endT) || endT <= startT) {
-            endT = Math.max(startT + 0.8, estEndT);
-          }
+        // If no explicit timestamps, use smart fallback
+        if (startT === null || isNaN(startT)) {
+          startT = lastEndTime;
+        }
+        if (endT === null || isNaN(endT) || endT <= startT) {
+          endT = startT + Math.max(1.5, Number((item.text.length * 0.08).toFixed(1)));
         }
 
         // Clamp bounds
         startT = Math.max(0, Number(startT.toFixed(1)));
-        endT = Math.min(totalOrigDuration, Math.max(startT + 0.5, Number(endT.toFixed(1))));
-
-        if (lineIdx === parsedItems.length - 1) {
-          endT = Math.max(endT, totalOrigDuration);
-        }
+        endT = Math.max(startT + 0.5, Number(endT.toFixed(1)));
 
         lastEndTime = endT;
 
         syncedSentences.push({
           startTime: startT,
           endTime: endT,
-          text: lineText
+          text: item.text.trim()
         });
       });
 
-      // 4. Update transcript in app
+      // Update transcript state across the app
       this.fullTranscript = syncedSentences;
+      this.originalTranscript = JSON.parse(JSON.stringify(syncedSentences));
+      this.filteredTranscript = [...this.fullTranscript];
       this.isTranscriptEdited = true;
       this.updateTranscriptEditStatusBadge(true);
       
       const sCountBadge = document.getElementById('sentenceCountBadge');
-      if (sCountBadge) sCountBadge.textContent = `${this.fullTranscript.length} sentences`;
+      if (sCountBadge) sCountBadge.textContent = `${this.fullTranscript.length} câu`;
+
+      // Automatically adjust clip range to cover up to first 4 sentences or first 30 seconds
+      if (this.fullTranscript.length > 0) {
+        const clipStart = this.fullTranscript[0].startTime;
+        const endSentenceIdx = Math.min(this.fullTranscript.length - 1, 3);
+        const clipEnd = this.fullTranscript[endSentenceIdx].endTime;
+        this.setClipBounds(clipStart, clipEnd, 0, endSentenceIdx);
+      }
 
       this.filterTranscript(document.getElementById('transcriptSearchInput')?.value || '');
+      this.renderTranscriptList();
+      this.renderTopBarClipSelector();
       this.saveEditedTranscript(true);
 
       this.closeFullTranscriptSyncModal();
-      this.showToast(`🎉 Đã đồng bộ thành công ${syncedSentences.length} mệnh đề/câu phụ đề chuẩn xác cho toàn bộ video!`, 'success');
+      this.showToast(`🎉 Đã đồng bộ thành công toàn bộ ${syncedSentences.length} câu phụ đề chuẩn xác!`, 'success');
+    } catch (err) {
+      console.error('Error applying AI transcript sync:', err);
+      this.showToast(`Lỗi đồng bộ: ${err.message}`, 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+  }
     } catch (err) {
       console.error('Error applying AI transcript sync:', err);
       this.showToast(`Lỗi đồng bộ: ${err.message}`, 'error');
