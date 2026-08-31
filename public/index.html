@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LingoTube AI — YouTube English Listening & Clip Trimmer</title>
   <meta name="description" content="Master English listening with YouTube clips, smart caption deduplication, lexical chunking, and AI feedback." />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='25' fill='%232563eb'/><path d='M38 30 L72 50 L38 70 Z' fill='white'/></svg>">
 
   <!-- Google Fonts: Inter & Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -344,22 +345,65 @@
     <!-- ============================================================= -->
     <!-- VIEW 1: GEMINI-STYLE LANDING HOME SCREEN (LIGHT THEME)        -->
     <!-- ============================================================= -->
-    <section id="landingHomeView" class="max-w-3xl w-full mx-auto flex flex-col justify-between items-center min-h-[calc(100vh-120px)] py-4 sm:py-8">
+    <section id="landingHomeView" class="max-w-3xl w-full mx-auto flex flex-col justify-between items-center min-h-[calc(100vh-120px)] py-4 sm:py-6">
       
       <!-- Top / Center Spaced Hero Greeting -->
-      <div class="w-full flex-1 flex flex-col justify-center items-center text-center my-auto">
+      <div class="w-full flex-1 flex flex-col justify-center items-center text-center my-auto pt-4">
         <div class="space-y-2 animate-in fade-in zoom-in-95 duration-300">
-          <h1 class="font-heading font-black text-4xl sm:text-6xl text-slate-900 tracking-tight leading-tight">
+          <h1 class="font-heading font-black text-3xl sm:text-5xl text-slate-900 tracking-tight leading-tight">
             Hello, <span id="landingGreetingName" class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">bạn</span> 👋
           </h1>
-          <p class="text-xs sm:text-base text-slate-400 font-medium tracking-wide">
+          <p class="text-xs sm:text-sm text-slate-500 font-medium tracking-wide">
             What would you like to practice today?
           </p>
         </div>
       </div>
 
+      <!-- Featured Quick-Start Lessons / Sample Videos -->
+      <div class="w-full my-4 sm:my-6 space-y-2.5">
+        <div class="flex items-center justify-between text-xs text-slate-500 font-bold px-1">
+          <span class="flex items-center gap-1.5"><i class="fa-solid fa-sparkles text-amber-500"></i> Bài học mẫu luyện nghe ngay:</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          
+          <!-- Sample 1: Steve Jobs -->
+          <div onclick="app.loadSampleVideo('UF8uR6Z6KLc')" class="glass-card p-3 rounded-2xl border border-slate-200 hover:border-blue-500 hover:shadow-md transition cursor-pointer flex items-center sm:flex-col sm:items-start gap-2.5 group">
+            <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm shrink-0 group-hover:bg-blue-600 group-hover:text-white transition">
+              <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h4 class="font-bold text-xs text-slate-900 truncate group-hover:text-blue-600 transition">Steve Jobs' Stanford Speech</h4>
+              <p class="text-[11px] text-slate-500 truncate">Stanford Commencement Address</p>
+            </div>
+          </div>
+
+          <!-- Sample 2: TED Amy Cuddy -->
+          <div onclick="app.loadSampleVideo('Ks-_Mh1QhMc')" class="glass-card p-3 rounded-2xl border border-slate-200 hover:border-red-500 hover:shadow-md transition cursor-pointer flex items-center sm:flex-col sm:items-start gap-2.5 group">
+            <div class="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center text-sm shrink-0 group-hover:bg-red-600 group-hover:text-white transition">
+              <i class="fa-solid fa-lightbulb"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h4 class="font-bold text-xs text-slate-900 truncate group-hover:text-red-600 transition">Body Language Shapes You</h4>
+              <p class="text-[11px] text-slate-500 truncate">TED Talks • Amy Cuddy</p>
+            </div>
+          </div>
+
+          <!-- Sample 3: BBC English -->
+          <div onclick="app.loadSampleVideo('BhyIdwU_3sE')" class="glass-card p-3 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-md transition cursor-pointer flex items-center sm:flex-col sm:items-start gap-2.5 group">
+            <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition">
+              <i class="fa-solid fa-headphones"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h4 class="font-bold text-xs text-slate-900 truncate group-hover:text-emerald-600 transition">Why Do We Laugh?</h4>
+              <p class="text-[11px] text-slate-500 truncate">BBC 6 Minute English</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- Bottom Chat / Input Box (Pinned near bottom like Gemini / ChatGPT) -->
-      <div class="w-full pt-4 pb-2 sm:pb-4">
+      <div class="w-full pt-2 pb-2 sm:pb-4">
         <div class="glass-panel p-2 sm:p-2.5 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xl bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all duration-300">
           <form id="landingVideoImportForm" onsubmit="app.handleLandingVideoImport(event)" class="flex flex-col sm:flex-row items-center gap-2">
             <div class="relative flex-1 flex items-center min-w-0 w-full">
@@ -369,9 +413,8 @@
               <input 
                 type="text" 
                 id="landingYoutubeUrlInput" 
-                placeholder="Paste a YouTube link (e.g. https://youtu.be/...)" 
+                placeholder="Dán link YouTube (hoặc bấm 'Bắt đầu học' để luyện bài mẫu)..." 
                 class="w-full py-2.5 sm:py-3 bg-transparent text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none min-w-0 truncate"
-                required 
               />
               <button 
                 type="button" 
@@ -1919,7 +1962,7 @@
   <!-- ================================================================= -->
   <!-- MODAL: DAILY CHECK-IN WELCOME POPUP (TỰ ĐỘNG ĐIỂM DANH)           -->
   <!-- ================================================================= -->
-  <div id="dailyWelcomeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+  <div id="dailyWelcomeModal" onclick="if(event.target === this) app.closeDailyWelcomeModal()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
     <div class="glass-panel bg-white w-full max-w-md rounded-3xl p-6 sm:p-7 border border-emerald-200 shadow-2xl space-y-4 modal-content text-left">
       
       <!-- Top Icon Badge -->
@@ -2563,7 +2606,7 @@
   <!-- ================================================================= -->
   <!-- MODAL: DAILY CHECK-IN & STREAK REWARDS                            -->
   <!-- ================================================================= -->
-  <div id="dailyCheckInModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden modal-overlay">
+  <div id="dailyCheckInModal" onclick="if(event.target === this) app.closeDailyCheckInModal()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden modal-overlay">
     <div class="glass-panel bg-white w-full max-w-lg rounded-2xl p-6 border border-slate-200 shadow-2xl space-y-5 modal-content">
       
       <!-- Modal Header -->
@@ -3274,56 +3317,6 @@
         </button>
       </div>
 
-    </div>
-  </div>
-
-  <!-- ================================================================= -->
-  <!-- MODAL: DAILY WELCOME / CHECK-IN STREAK                            -->
-  <!-- ================================================================= -->
-  <div id="dailyWelcomeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm hidden modal-overlay transition-opacity">
-    <div class="glass-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-6 relative overflow-hidden text-center border-2 border-emerald-100">
-      <div class="absolute top-0 left-0 w-full h-1 bg-slate-100"><div id="welcomeAutoCloseProgressBar" class="h-full bg-emerald-500 transition-all duration-50" style="width: 100%"></div></div>
-      <div class="flex flex-col items-center justify-center space-y-3 pt-2">
-        <div class="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center text-2xl shadow-sm">
-          <i class="fa-regular fa-calendar-check"></i>
-        </div>
-        <div class="space-y-1">
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Phiên Luyện Hôm Nay</p>
-          <h3 id="welcomeModalGreetingTitle" class="text-xl font-bold text-slate-800 font-heading">Chào mừng trở lại! 👋</h3>
-          <p class="text-[13px] text-slate-600 font-medium">Hệ thống đã tự động điểm danh: <span id="welcomeModalStreakText" class="text-emerald-600 font-bold">Chuỗi 1 Ngày (+50 EXP)</span></p>
-        </div>
-      </div>
-      <div id="welcomeWeeklyCheckInDays" class="flex items-center justify-between gap-1 py-2 border-t border-b border-slate-100"></div>
-      <div class="space-y-3">
-        <p id="welcomeCountdownText" class="text-[11px] text-slate-400 font-medium">Tự động mở bài học sau 2 giây...</p>
-        <div class="flex items-center gap-3">
-          <button onclick="app.closeDailyWelcomeModal()" class="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-600/20 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer">
-            <i class="fa-solid fa-bolt text-amber-300"></i> Bắt đầu học ngay
-          </button>
-          <button onclick="app.closeDailyWelcomeModal()" class="px-5 py-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition active:scale-95 cursor-pointer">
-            Ở lại trang chủ
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div id="dailyCheckInModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm hidden modal-overlay">
-    <div class="glass-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-5 text-center border-2 border-orange-200 relative">
-      <button onclick="app.closeDailyCheckInModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-900 p-1.5 rounded-xl hover:bg-slate-100 transition cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
-      <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-amber-400 to-orange-500 text-white flex items-center justify-center text-3xl mx-auto shadow-lg shadow-orange-500/30 mb-2">
-        <i class="fa-solid fa-fire"></i>
-      </div>
-      <h3 class="text-xl font-bold text-slate-800 font-heading">Chuỗi Ngày Học</h3>
-      <div class="grid grid-cols-3 gap-2">
-        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-bold">Hiện tại</span><span id="modalCurrentStreakVal" class="text-lg font-black text-orange-600">0</span></div>
-        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-bold">Kỷ lục</span><span id="modalLongestStreakVal" class="text-lg font-black text-slate-700">0</span></div>
-        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-100"><span class="block text-[10px] text-slate-500 uppercase font-bold">Tổng EXP</span><span id="modalTotalExpVal" class="text-lg font-black text-blue-600">0</span></div>
-      </div>
-      <div id="modalWeeklyCheckInDaysContainer" class="flex items-center justify-between gap-1 py-2"></div>
-      <button id="btnModalPerformCheckIn" onclick="app.performDailyCheckIn()" class="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition flex items-center justify-center gap-2 shadow-md shadow-orange-500/25 cursor-pointer">
-        <span id="btnModalPerformCheckInText">Điểm danh ngay hôm nay (+50 EXP)</span>
-      </button>
     </div>
   </div>
 

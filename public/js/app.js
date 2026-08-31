@@ -54,6 +54,7 @@ const SAMPLE_DEMO_TRANSCRIPTS = {
 
 class LingoTubeApp {
   constructor() {
+    window.app = this;
     this.currentVideoId = '';
     this.videoTitle = '';
     this.channelName = '';
@@ -460,6 +461,31 @@ class LingoTubeApp {
       }
     });
 
+    // Direct listeners for Sidebar toggle buttons
+    const btnOpenSidebar = document.getElementById('btnOpenSidebar');
+    if (btnOpenSidebar) {
+      btnOpenSidebar.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleSidebar(true);
+      });
+    }
+
+    const btnCloseSidebar = document.getElementById('btnCloseSidebar');
+    if (btnCloseSidebar) {
+      btnCloseSidebar.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleSidebar(false);
+      });
+    }
+
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+    if (sidebarBackdrop) {
+      sidebarBackdrop.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleSidebar(false);
+      });
+    }
+
     // Close step dropdown if clicked outside
     document.addEventListener('click', (e) => {
       const dropdown = document.getElementById('stepSelectorDropdown');
@@ -792,8 +818,10 @@ class LingoTubeApp {
 
     if (shouldOpen) {
       sidebar.classList.remove('-translate-x-full');
+      sidebar.classList.add('translate-x-0');
       if (backdrop) backdrop.classList.remove('hidden');
     } else {
+      sidebar.classList.remove('translate-x-0');
       sidebar.classList.add('-translate-x-full');
       if (backdrop) backdrop.classList.add('hidden');
     }
@@ -804,11 +832,15 @@ class LingoTubeApp {
   }
 
   handleLandingVideoImport(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     const input = document.getElementById('landingYoutubeUrlInput');
-    if (!input) return;
-    const url = input.value.trim();
-    if (!url) return;
+    const url = input ? input.value.trim() : '';
+
+    if (!url) {
+      this.showToast('🚀 Đang mở bài học mẫu Steve Jobs để bạn trải nghiệm ngay!', 'info');
+      this.loadSampleVideo('UF8uR6Z6KLc');
+      return;
+    }
 
     const videoId = this.extractVideoId(url);
     if (!videoId) {
@@ -1293,35 +1325,57 @@ class LingoTubeApp {
   }
 
   /**
-   * Highlights active sentence in Tab 1 Transcript List
+   * Highlights active sentence in Tab 1 Transcript List with high-performance caching
    */
   highlightActiveSentence(currentTime) {
+    if (this.activeTab !== 'trimmer') return;
+    const currentActive = document.querySelector('.transcript-row.active-speaking');
+    if (currentActive) {
+      const s = parseFloat(currentActive.dataset.start);
+      const e = parseFloat(currentActive.dataset.end);
+      if (!isNaN(s) && !isNaN(e) && currentTime >= s && currentTime < e) {
+        return; // Still playing current active sentence, skip DOM work!
+      }
+      currentActive.classList.remove('active-speaking');
+    }
+
     const rows = document.querySelectorAll('.transcript-row');
-    rows.forEach(row => {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
       const start = parseFloat(row.dataset.start);
       const end = parseFloat(row.dataset.end);
       if (!isNaN(start) && !isNaN(end) && currentTime >= start && currentTime < end) {
         row.classList.add('active-speaking');
-      } else {
-        row.classList.remove('active-speaking');
+        break;
       }
-    });
+    }
   }
 
   /**
-   * Highlights active sentence in Listen Tab
+   * Highlights active sentence in Listen Tab with high-performance caching
    */
   highlightListenActiveSentence(currentTime) {
+    if (this.activeTab !== 'listen') return;
+    const currentActive = document.querySelector('.listen-sentence-row.border-blue-500');
+    if (currentActive) {
+      const s = parseFloat(currentActive.dataset.start);
+      const e = parseFloat(currentActive.dataset.end);
+      if (!isNaN(s) && !isNaN(e) && currentTime >= s && currentTime < e) {
+        return; // Still playing current active sentence, skip DOM work!
+      }
+      currentActive.classList.remove('border-blue-500', 'bg-blue-50/70');
+    }
+
     const rows = document.querySelectorAll('.listen-sentence-row');
-    rows.forEach(row => {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
       const start = parseFloat(row.dataset.start);
       const end = parseFloat(row.dataset.end);
       if (!isNaN(start) && !isNaN(end) && currentTime >= start && currentTime < end) {
         row.classList.add('border-blue-500', 'bg-blue-50/70');
-      } else {
-        row.classList.remove('border-blue-500', 'bg-blue-50/70');
+        break;
       }
-    });
+    }
   }
 
   /**
@@ -2312,8 +2366,8 @@ class LingoTubeApp {
 
     // Clean all previous heuristic caches from localStorage
     try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
+      const keys = Object.keys(localStorage);
+      for (const k of keys) {
         if (k && k.startsWith('lingotube_vachla_')) {
           try {
             const v = JSON.parse(localStorage.getItem(k));
@@ -5625,16 +5679,6 @@ ${rawTranscriptContent}
       }
     }
   }
-    } catch (err) {
-      console.error('Error applying AI transcript sync:', err);
-      this.showToast(`Lỗi đồng bộ: ${err.message}`, 'error');
-    } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = origHtml;
-      }
-    }
-  }
 
   /**
    * Open AI Sentence Breakdown Guide & Prompt Helper Modal
@@ -6619,6 +6663,11 @@ ${linesList}
       // Strict enforcement: ensure chunk length <= 9 words
       if (bestCut - startIdx > 9) {
         bestCut = startIdx + 6;
+      }
+
+      // Safeguard against infinite loop
+      if (bestCut <= startIdx) {
+        bestCut = startIdx + 1;
       }
 
       chunks.push(words.slice(startIdx, bestCut));
@@ -8653,10 +8702,9 @@ ${linesList}
     if (!isChecked) {
       // Auto check in silently
       await this.performDailyCheckIn(true);
+      // Only show popup when fresh check-in happened
+      this.showDailyWelcomeModal();
     }
-    
-    // Always show the modal for the demo
-    this.showDailyWelcomeModal();
   }
 
   showDailyWelcomeModal() {
@@ -8685,8 +8733,8 @@ ${linesList}
 
     modal.classList.remove('hidden');
 
-    // Start auto-close 4s countdown (slightly longer for video demo)
-    this.startWelcomeCountdown(4000);
+    // Auto-close countdown
+    this.startWelcomeCountdown(3000);
   }
 
   renderWelcomeWeeklyDays() {
@@ -8750,17 +8798,21 @@ ${linesList}
       const secondsLeft = Math.ceil(remaining / 1000);
 
       if (bar) bar.style.width = `${pct}%`;
-      if (text) text.textContent = `Tự động mở bài học sau ${secondsLeft} giây...`;
+      if (text) text.textContent = `Tự động đóng sau ${secondsLeft} giây...`;
 
       if (remaining <= 0) {
         clearInterval(this._welcomeCountdownTimer);
+        this._welcomeCountdownTimer = null;
         this.closeDailyWelcomeModal();
       }
     }, interval);
   }
 
   closeDailyWelcomeModal() {
-    if (this._welcomeCountdownTimer) clearInterval(this._welcomeCountdownTimer);
+    if (this._welcomeCountdownTimer) {
+      clearInterval(this._welcomeCountdownTimer);
+      this._welcomeCountdownTimer = null;
+    }
     const modal = document.getElementById('dailyWelcomeModal');
     if (modal) modal.classList.add('hidden');
   }
@@ -8965,47 +9017,26 @@ ${linesList}
     }, 3800);
   }
 
-  async syncAllDataToCloud() {
-    if (!this.db || !this.user || this.user.isAnonymous) return;
+  openVideoImportModal() {
+    const modal = document.getElementById('videoImportModal');
+    if (modal) modal.classList.remove('hidden');
+  }
 
-    try {
-      const localClips = JSON.parse(localStorage.getItem('lingotube_guest_clips') || '[]');
-      const localVocab = JSON.parse(localStorage.getItem('lingotube_saved_vocab') || '[]');
-      
-      const batch = this.db.batch();
-      const userRef = this.db.collection('users').doc(this.user.uid);
-      
-      localClips.forEach(clip => {
-        const docRef = userRef.collection('clips').doc(clip.clipId);
-        batch.set(docRef, clip, { merge: true });
-      });
-      
-      localVocab.forEach(vocab => {
-        const docRef = userRef.collection('vocab').doc(vocab.id);
-        batch.set(docRef, vocab, { merge: true });
-      });
-
-      const graduatedVideos = JSON.parse(localStorage.getItem('lingotube_graduated_videos') || '{}');
-      if (Object.keys(graduatedVideos).length > 0) {
-        batch.set(userRef.collection('stats').doc('graduatedVideos'), graduatedVideos, { merge: true });
-      }
-      
-      batch.set(userRef, {
-        email: this.user.email,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
-
-      await batch.commit();
-
-      console.log('Sync to cloud successful.');
-    } catch (err) {
-      console.error('Upload sync error:', err);
-    }
+  closeVideoImportModal() {
+    const modal = document.getElementById('videoImportModal');
+    if (modal) modal.classList.add('hidden');
   }
 }
 
-// Instantiate App globally
-let app;
-window.addEventListener('DOMContentLoaded', () => {
-  app = new LingoTubeApp();
-});
+// Instantiate App globally on window
+function initLingoTubeApp() {
+  if (!window.app) {
+    window.app = new LingoTubeApp();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initLingoTubeApp);
+} else {
+  initLingoTubeApp();
+}
