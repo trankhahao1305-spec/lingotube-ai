@@ -1208,22 +1208,27 @@ class LingoTubeApp {
   }
 
   onPlayerStateChange(event) {
-    const playBtn = document.getElementById('btnPlayPause');
     if (event.data === YT.PlayerState.PLAYING) {
       this.isPlaying = true;
-      if (playBtn) {
-        playBtn.innerHTML = `<i class="fa-solid fa-pause"></i> <span>Pause</span>`;
-        playBtn.className = 'px-3.5 py-2 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs transition flex items-center gap-1.5';
-      }
-      this.updateListenPlayBtn(true);
-    } else {
+      this.updatePlayPauseButtonUI(true);
+    } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED || event.data === YT.PlayerState.CUED) {
       this.isPlaying = false;
-      if (playBtn) {
-        playBtn.innerHTML = `<i class="fa-solid fa-play"></i> <span>Play</span>`;
-        playBtn.className = 'px-3.5 py-2 rounded-lg bg-mint-500 hover:bg-mint-600 text-slate-950 font-bold text-xs transition flex items-center gap-1.5';
-      }
-      this.updateListenPlayBtn(false);
+      this.updatePlayPauseButtonUI(false);
     }
+  }
+
+  updatePlayPauseButtonUI(isPlaying) {
+    const playBtn = document.getElementById('btnPlayPause');
+    if (playBtn) {
+      if (isPlaying) {
+        playBtn.innerHTML = `<i class="fa-solid fa-pause"></i> <span>Tạm dừng</span>`;
+        playBtn.className = 'px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer';
+      } else {
+        playBtn.innerHTML = `<i class="fa-solid fa-play"></i> <span>Phát Video</span>`;
+        playBtn.className = 'px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm cursor-pointer';
+      }
+    }
+    this.updateListenPlayBtn(isPlaying);
   }
 
   /**
@@ -4870,21 +4875,32 @@ Return ONLY a valid JSON object with the following schema:
   /**
    * Playback Controls
    */
-  togglePlayPause() {
+  togglePlayPause(e) {
+    if (e && typeof e.stopPropagation === 'function') {
+      e.stopPropagation();
+    }
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
+
     if (!this.ytPlayer || !this.isPlayerReady) return;
-    let isCurrentlyPlaying = this.isPlaying;
+
+    let isCurrentlyPlaying = false;
     if (typeof this.ytPlayer.getPlayerState === 'function') {
       const state = this.ytPlayer.getPlayerState();
-      isCurrentlyPlaying = (state === 1 || state === 3);
+      isCurrentlyPlaying = (state === 1 || state === 3); // 1: PLAYING, 3: BUFFERING
+    } else {
+      isCurrentlyPlaying = this.isPlaying;
     }
+
     if (isCurrentlyPlaying) {
       this.ytPlayer.pauseVideo();
       this.isPlaying = false;
-      this.updateListenPlayBtn(false);
+      this.updatePlayPauseButtonUI(false);
     } else {
       this.ytPlayer.playVideo();
       this.isPlaying = true;
-      this.updateListenPlayBtn(true);
+      this.updatePlayPauseButtonUI(true);
     }
   }
 
