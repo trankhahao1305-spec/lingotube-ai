@@ -755,6 +755,16 @@
             <!-- Right: Action Tools + Search + Auto 30s -->
             <div class="flex items-center gap-1.5 flex-wrap">
               <button 
+                id="btnOpenMusicLyricsModal" 
+                onclick="app.openMusicLyricsModal()" 
+                class="px-2.5 py-1 rounded-lg bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 hover:from-pink-600 hover:to-amber-600 text-white shadow-2xs transition flex items-center gap-1.5 text-[11px] font-bold active:scale-95 cursor-pointer"
+                title="Đồng bộ Lời bài hát & File .LRC chuyên dụng cho Video ca nhạc"
+              >
+                <i class="fa-solid fa-music text-amber-200 text-[10px]"></i>
+                <span>Lời bài hát</span>
+              </button>
+
+              <button 
                 id="btnOpenFullSyncModal" 
                 onclick="app.openFullTranscriptSyncModal()" 
                 class="px-2 py-1 rounded-lg bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-2xs transition flex items-center gap-1 text-[11px] font-bold active:scale-95 cursor-pointer"
@@ -2729,6 +2739,143 @@
       >
         <span>Nhận Thưởng & Tiếp Tục Chinh Phục 🚀</span>
       </button>
+
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- MODAL: MUSIC LYRICS & LRC SYNC (DEDICATED FOR MUSIC VIDEOS)      -->
+  <!-- ================================================================= -->
+  <div id="musicLyricsModal" onclick="if(event.target === this) app.closeMusicLyricsModal()" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-3xl rounded-3xl p-5 sm:p-7 border border-pink-200 shadow-2xl space-y-4 modal-content max-h-[92vh] overflow-y-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-pink-500 via-rose-500 to-amber-500 flex items-center justify-center text-white text-base shadow-sm shadow-pink-500/20">
+            <i class="fa-solid fa-music"></i>
+          </div>
+          <div>
+            <h3 class="font-heading font-bold text-base text-slate-900 flex items-center gap-2">
+              <span>Đồng Bộ Lời Bài Hát</span>
+              <span class="px-2 py-0.5 rounded-full bg-pink-50 text-pink-700 text-[10px] font-mono font-bold border border-pink-200">Music Mode</span>
+            </h3>
+            <p class="text-[11px] text-slate-500">Chuyên dụng cho Video ca nhạc, bài hát tiếng Anh & file .LRC</p>
+          </div>
+        </div>
+        <button onclick="app.closeMusicLyricsModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Quick Helper Actions (Google Search + Gemini Prompt) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+        <!-- Action 1: Google Lyrics Search -->
+        <button 
+          type="button" 
+          onclick="app.searchSongLyricsOnGoogle()" 
+          class="p-3 rounded-2xl bg-slate-50 hover:bg-blue-50/70 border border-slate-200 hover:border-blue-300 transition flex items-center gap-3 text-left group cursor-pointer"
+        >
+          <div class="w-8 h-8 rounded-xl bg-white text-blue-600 flex items-center justify-center text-sm shadow-xs border border-slate-200 shrink-0 group-hover:scale-105 transition">
+            <i class="fa-brands fa-google text-blue-500"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <h5 class="text-xs font-bold text-slate-900 group-hover:text-blue-600 transition flex items-center justify-between">
+              <span>1. Tìm Lyrics trên Google</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-400"></i>
+            </h5>
+            <p class="text-[11px] text-slate-500 truncate">Mở tab tìm lời bài hát chuẩn</p>
+          </div>
+        </button>
+
+        <!-- Action 2: Copy Gemini Prompt -->
+        <button 
+          type="button" 
+          onclick="app.copyGeminiSongLyricsPrompt()" 
+          class="p-3 rounded-2xl bg-slate-50 hover:bg-purple-50/70 border border-slate-200 hover:border-purple-300 transition flex items-center gap-3 text-left group cursor-pointer"
+        >
+          <div class="w-8 h-8 rounded-xl bg-white text-purple-600 flex items-center justify-center text-sm shadow-xs border border-slate-200 shrink-0 group-hover:scale-105 transition">
+            <i class="fa-solid fa-robot text-purple-500"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <h5 class="text-xs font-bold text-slate-900 group-hover:text-purple-600 transition flex items-center justify-between">
+              <span>2. Copy Prompt cho Gemini</span>
+              <i class="fa-solid fa-copy text-[10px] text-slate-400"></i>
+            </h5>
+            <p class="text-[11px] text-slate-500 truncate">Nhờ AI nghe & gắn timeline chuẩn</p>
+          </div>
+        </button>
+      </div>
+
+      <!-- Settings Row: Skip Intro Offset -->
+      <div class="p-3 rounded-2xl bg-amber-50/60 border border-amber-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 text-xs">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-forward-step text-amber-600 text-sm"></i>
+          <div>
+            <span class="font-bold text-slate-900">Bỏ qua đoạn nhạc dạo (Intro Offset):</span>
+            <p class="text-[11px] text-slate-500">Bắt đầu câu hát đầu tiên từ giây thứ mấy (nếu dán lời thô không có timeline)</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0 w-full sm:w-auto">
+          <input 
+            type="number" 
+            id="inputMusicIntroOffset" 
+            value="0" 
+            min="0" 
+            step="0.5" 
+            class="w-20 px-2.5 py-1 bg-white border border-amber-300 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 text-center" 
+          />
+          <span class="font-mono font-semibold text-slate-600">giây</span>
+          <button 
+            type="button" 
+            onclick="app.setMusicIntroFromCurrentVideoTime()" 
+            class="px-2.5 py-1 rounded-xl bg-amber-200/70 hover:bg-amber-300/80 text-amber-900 font-semibold text-[11px] transition cursor-pointer"
+            title="Lấy số giây hiện tại đang phát của video"
+          >
+            <i class="fa-solid fa-location-crosshairs mr-1"></i>Lấy mốc video
+          </button>
+        </div>
+      </div>
+
+      <!-- Input Textarea -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between text-xs">
+          <label for="inputMusicLyricsText" class="font-bold text-slate-700 flex items-center gap-1.5">
+            <i class="fa-solid fa-align-left text-pink-500"></i>
+            <span>Dán Lời bài hát (.LRC / Gemini Output / Lời thô):</span>
+          </label>
+          <span class="text-[11px] text-slate-400 font-mono">Hỗ trợ định dạng [00:15.20] hoặc từng dòng</span>
+        </div>
+        <textarea 
+          id="inputMusicLyricsText" 
+          rows="9" 
+          placeholder="[00:14.50] Neon lights are fading slowly
+[00:18.20] In the dark we both know
+[00:22.10] We don't need the morning light
+(Hoặc dán toàn bộ lời bài hát thuần văn bản vào đây)..." 
+          class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs sm:text-sm font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-pink-500 focus:ring-4 focus:ring-pink-500/10 transition resize-y leading-relaxed"
+        ></textarea>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="pt-2 flex items-center justify-between border-t border-slate-100 gap-2">
+        <button 
+          type="button" 
+          onclick="app.closeMusicLyricsModal()" 
+          class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition cursor-pointer"
+        >
+          Đóng
+        </button>
+        <button 
+          type="button" 
+          id="btnApplyMusicLyricsSync" 
+          onclick="app.applyMusicLyricsSync()" 
+          class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 hover:from-pink-600 hover:to-amber-600 text-white font-bold text-xs sm:text-sm transition flex items-center gap-2 shadow-md shadow-pink-500/20 active:scale-95 cursor-pointer"
+        >
+          <i class="fa-solid fa-wand-magic-sparkles text-amber-200"></i>
+          <span>Áp Dụng Lời Bài Hát</span>
+        </button>
+      </div>
 
     </div>
   </div>

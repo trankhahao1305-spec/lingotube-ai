@@ -5681,6 +5681,240 @@ ${rawTranscriptContent}
   }
 
   /**
+   * =========================================================================
+   * Phase 7: Music Lyrics & LRC Synchronization for Music Videos
+   * =========================================================================
+   */
+  openMusicLyricsModal() {
+    if (!this.currentVideoId) {
+      this.showToast('Vui lòng tải một bài hát / video YouTube trước khi đồng bộ lời!', 'warning');
+      return;
+    }
+
+    const modal = document.getElementById('musicLyricsModal');
+    if (modal) modal.classList.remove('hidden');
+
+    // Pre-fill intro offset if player has current time > 0
+    const introInput = document.getElementById('inputMusicIntroOffset');
+    if (introInput && this.ytPlayer && typeof this.ytPlayer.getCurrentTime === 'function') {
+      const cur = Math.floor(this.ytPlayer.getCurrentTime() || 0);
+      if (cur > 0 && cur < 60) {
+        introInput.value = cur;
+      }
+    }
+  }
+
+  closeMusicLyricsModal() {
+    const modal = document.getElementById('musicLyricsModal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  searchSongLyricsOnGoogle() {
+    let title = this.videoTitle || '';
+    // Clean up typical YouTube MV titles: "Song Name (Official Music Video)", "[MV]", "ft. Artist", etc.
+    title = title
+      .replace(/\((?:official|music|video|audio|lyric|lyrics|hd|4k|mv|prod\.)[^)]*\)/gi, '')
+      .replace(/\[(?:official|music|video|audio|lyric|lyrics|hd|4k|mv|prod\.)[^\]]*\]/gi, '')
+      .replace(/\|.*$/g, '')
+      .trim();
+
+    const query = (title ? `${title} lyrics` : 'English song lyrics');
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+    window.open(searchUrl, '_blank');
+    this.showToast('🔍 Đang mở Google tìm lời bài hát trong tab mới...', 'info');
+  }
+
+  async copyGeminiSongLyricsPrompt() {
+    const videoUrl = this.currentVideoId ? `https://www.youtube.com/watch?v=${this.currentVideoId}` : 'https://www.youtube.com/watch?v=...';
+    const videoTitle = this.videoTitle || 'YouTube Music Video';
+
+    const promptText = `Tôi đang tự học tiếng Anh qua bài hát (phục vụ mục đích học tập phi thương mại).
+Dưới đây là văn bản lời bài hát mà tôi đã có:
+----------------------------------------
+[DÁN TOÀN BỘ LỜI BÀI HÁT TIẾNG ANH VÀO ĐÂY]
+----------------------------------------
+
+Dựa vào video âm nhạc YouTube: ${videoUrl} (Tiêu đề: "${videoTitle}"), bạn hãy giúp tôi nghe và gắn mốc thời gian thực tế cho từng câu hát theo định dạng chuẩn:
+[phút:giây - phút:giây] Lời bài hát tiếng Anh
+
+Ví dụ định dạng đầu ra mẫu:
+[00:14.5 - 00:18.2] Neon lights are fading slowly
+[00:18.2 - 00:22.5] In the dark, we both know
+[00:22.5 - 00:26.8] We don't need the morning light`;
+
+    try {
+      await navigator.clipboard.writeText(promptText);
+      this.showToast('📋 Đã sao chép Prompt mẫu! Hãy dán vào Gemini kèm lời bài hát của bạn.', 'success');
+    } catch (e) {
+      const ta = document.getElementById('inputMusicLyricsText');
+      if (ta) ta.value = promptText;
+      this.showToast('Đã điền Prompt mẫu vào ô văn bản bên dưới!', 'info');
+    }
+  }
+
+  setMusicIntroFromCurrentVideoTime() {
+    const introInput = document.getElementById('inputMusicIntroOffset');
+    if (!introInput) return;
+
+    if (this.ytPlayer && typeof this.ytPlayer.getCurrentTime === 'function') {
+      const cur = Number(this.ytPlayer.getCurrentTime().toFixed(1));
+      introInput.value = cur;
+      this.showToast(`⏱️ Đã lấy mốc dạo đầu: ${cur} giây (${this.formatSeconds(cur, true)})`, 'info');
+    } else {
+      this.showToast('Chưa phát video để lấy mốc thời gian.', 'warning');
+    }
+  }
+
+  async applyMusicLyricsSync() {
+    const textarea = document.getElementById('inputMusicLyricsText');
+    const rawInput = textarea ? textarea.value.trim() : '';
+
+    if (!rawInput) {
+      this.showToast('Vui lòng dán lời bài hát hoặc file .LRC vào ô trước khi áp dụng.', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('btnApplyMusicLyricsSync');
+    let origHtml = '';
+    if (btn) {
+      origHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-amber-300"></i> <span>Đang xử lý lời bài hát...</span>`;
+    }
+
+    try {
+      const introOffset = Math.max(0, parseFloat(document.getElementById('inputMusicIntroOffset')?.value || '0') || 0);
+      const rawLines = rawInput.split('\n');
+      const parsedItems = [];
+
+      for (let line of rawLines) {
+        line = line.trim();
+        if (!line) continue;
+
+        // Skip LRC metadata tags like [ti:...], [ar:...], [al:...], [by:...], [offset:...]
+        if (/^\[(ti|ar|al|by|offset|length|re|ve):/i.test(line)) continue;
+        if (line.startsWith('```') || line.toLowerCase().includes('here is') || line.toLowerCase().includes('định dạng đầu ra') || line.toLowerCase().includes('dưới đây là')) continue;
+
+        // 1. Check for Range Timestamps: [00:14.5 - 00:18.2] Text OR (00:14.5 - 00:18.2) Text
+        const rangeMatch = line.match(/^(?:\[|\()?([\d:\.,]+)\s*[-–—]\s*([\d:\.,]+)(?:\]|\))?[:\s-]*(.*)$/);
+        if (rangeMatch) {
+          const sT = this.parseTimestampToSeconds(rangeMatch[1]);
+          const eT = this.parseTimestampToSeconds(rangeMatch[2]);
+          const text = rangeMatch[3].replace(/^(?:#?\d+[\.\:\)\-]?|\-|\*|•)\s*/, '').trim();
+          if (text) {
+            parsedItems.push({
+              explicitStart: sT,
+              explicitEnd: eT,
+              text: text
+            });
+          }
+          continue;
+        }
+
+        // 2. Check for Single LRC Timestamp: [00:14.50] Text or [01:23.456] Text
+        const lrcMatch = line.match(/^\[([\d:\.,]+)\]\s*(.*)$/);
+        if (lrcMatch) {
+          const sT = this.parseTimestampToSeconds(lrcMatch[1]);
+          const text = lrcMatch[2].replace(/^(?:#?\d+[\.\:\)\-]?|\-|\*|•)\s*/, '').trim();
+          if (text) {
+            parsedItems.push({
+              explicitStart: sT,
+              explicitEnd: null, // will compute from next item or sentence length
+              text: text
+            });
+          }
+          continue;
+        }
+
+        // 3. Raw plain text line without timestamp
+        const cleanText = line.replace(/^(?:#?\d+[\.\:\)\-]?|\-|\*|•)\s*/, '').trim();
+        if (cleanText.length > 0) {
+          parsedItems.push({
+            explicitStart: null,
+            explicitEnd: null,
+            text: cleanText
+          });
+        }
+      }
+
+      const validItems = parsedItems.filter(item => item.text && item.text.trim().length > 0);
+      if (validItems.length === 0) {
+        throw new Error('Không trích xuất được câu hát nào. Vui lòng kiểm tra lại nội dung dán vào.');
+      }
+
+      let lastEndTime = introOffset;
+      const syncedSentences = [];
+
+      validItems.forEach((item, idx) => {
+        let startT = item.explicitStart;
+        let endT = item.explicitEnd;
+
+        // If explicit start is missing, calculate sequentially from last end
+        if (startT === null || isNaN(startT)) {
+          startT = lastEndTime;
+        }
+
+        // If end timestamp missing (e.g. single LRC tag or plain text)
+        if (endT === null || isNaN(endT) || endT <= startT) {
+          const nextItem = validItems[idx + 1];
+          if (nextItem && nextItem.explicitStart !== null && !isNaN(nextItem.explicitStart) && nextItem.explicitStart > startT) {
+            endT = nextItem.explicitStart;
+          } else {
+            // Smart lyrical duration based on syllable & character count (approx 3 to 6 seconds per lyrical phrase)
+            const calculatedDuration = Math.max(2.5, Number((item.text.length * 0.12).toFixed(1)));
+            endT = startT + Math.min(8.0, calculatedDuration);
+          }
+        }
+
+        // Clamp bounds
+        startT = Math.max(0, Number(startT.toFixed(1)));
+        endT = Math.max(startT + 0.8, Number(endT.toFixed(1)));
+        lastEndTime = endT;
+
+        syncedSentences.push({
+          startTime: startT,
+          endTime: endT,
+          text: item.text.trim()
+        });
+      });
+
+      // Update transcript state across the app
+      this.fullTranscript = syncedSentences;
+      this.originalTranscript = JSON.parse(JSON.stringify(syncedSentences));
+      this.filteredTranscript = [...this.fullTranscript];
+      this.isTranscriptEdited = true;
+      this.updateTranscriptEditStatusBadge(true);
+
+      const sCountBadge = document.getElementById('sentenceCountBadge');
+      if (sCountBadge) sCountBadge.textContent = `${this.fullTranscript.length} câu`;
+
+      // Set initial clip range to the first 3-4 lines (Intro / First Verse)
+      if (this.fullTranscript.length > 0) {
+        const clipStart = this.fullTranscript[0].startTime;
+        const endIdx = Math.min(this.fullTranscript.length - 1, 3);
+        const clipEnd = this.fullTranscript[endIdx].endTime;
+        this.setClipBounds(clipStart, clipEnd, 0, endIdx);
+      }
+
+      this.filterTranscript(document.getElementById('transcriptSearchInput')?.value || '');
+      this.renderTranscriptList();
+      this.renderTopBarClipSelector();
+      this.saveEditedTranscript(true);
+
+      this.closeMusicLyricsModal();
+      this.showToast(`🎵 Đã đồng bộ thành công ${syncedSentences.length} câu lời bài hát! Bắt đầu luyện hát & Shadowing ngay.`, 'success');
+    } catch (err) {
+      console.error('Error applying music lyrics sync:', err);
+      this.showToast(`Lỗi đồng bộ: ${err.message}`, 'error');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+  }
+
+  /**
    * Open AI Sentence Breakdown Guide & Prompt Helper Modal
    */
   openSentenceGuideModal() {
