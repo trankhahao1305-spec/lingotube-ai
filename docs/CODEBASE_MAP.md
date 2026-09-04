@@ -26,7 +26,7 @@ lingotube-ai/
 | Bước / Module | Tên Tab / Giao diện | Vị trí hàm chính trong `app.js` | Các hàm trọng tâm |
 | :--- | :--- | :--- | :--- |
 | **Bước 1** | **Trimmer (Cắt Clip)** | `setupTrimmer()`, `setClipBounds()`, `renderTranscriptList()` | `setStartFromSentence()`, `setEndFromSentence()`, `mergeTranscriptWithNext()`, `openSplitSentenceModal()` |
-| **Bước 2** | **Vạch Lá Tìm Sâu** | `setupVachLaWorkspace()` | `openVachLaAiSyncModal()`, `applyAiVachLaSync()`, `openCustomWordsModal()`, `applyCustomWordsAiSync()` |
+| **Bước 2** | **Vạch Lá Tìm Sâu** | `setupVachLaWorkspace()` | `openVachLaAiSyncModal()`, `applyAiVachLaSync()`, `toggleVachLaCardFlip()`, `openCustomWordsModal()`, `applyCustomWordsAiSync()` |
 | **Bước 3** | **Tam Sao Thất Bản** | `setupTamSaoWorkspace()` | `openYouGlish()`, `setAccentFilter()`, `saveVocabCard()` |
 | **Bước 4** | **Luyện Nghe Sâu** | `setupListenPracticeRoom()` | `listenTogglePlay()`, `listenReplayFromStart()`, `incrementListenReplayCount()`, `setSubtitleMaskMode()`, `completeListenMode()` |
 | **Bước 5** | **Shadowing Studio** | `setupShadowingStudio()` | `startShadowingRecording()`, `stopShadowingRecording()`, `evaluateShadowingPerformance()`, `renderShadowingEvaluation()` |

@@ -263,6 +263,50 @@ input[type=range]::-webkit-slider-thumb:hover {
   animation: pulseSlow 2.5s infinite ease-in-out;
 }
 
+/* ========================================================================= */
+/* Phase 2: Vach La Tim Sau Interactive 2-Sided 3D Flip Cards                */
+/* ========================================================================= */
+.vachla-flip-scene {
+  perspective: 1000px;
+  width: 100%;
+  min-height: 235px;
+  height: 235px;
+}
+
+.vachla-flip-card {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.vachla-flip-card.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.vachla-flip-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.vachla-flip-front {
+  transform: rotateY(0deg);
+  z-index: 2;
+}
+
+.vachla-flip-back {
+  transform: rotateY(180deg);
+  z-index: 1;
+}
+
 /* Cross-browser No Scrollbar Utility for Mobile Tab Navigation */
 .no-scrollbar::-webkit-scrollbar {
   display: none !important;

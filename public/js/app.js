@@ -2818,7 +2818,7 @@ Return ONLY a valid JSON object with the following schema:
               <span>Chi tiết ${chunks.length} cụm từ then chốt:</span>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
               ${chunks.map((chk, cIdx) => {
                 const chunkPhrase = chk.phrase || '';
                 const chunkIpa = chk.ipa || this.convertToIPA(chunkPhrase);
@@ -2829,55 +2829,99 @@ Return ONLY a valid JSON object with the following schema:
                 const chunkType = chk.grammar || 'Collocation / Phrase';
 
                 return `
-                  <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 hover:border-indigo-300 transition space-y-2.5 text-xs shadow-2xs group relative">
-                    <!-- Top Row: Phrase + Tag + Audio + Delete Button -->
-                    <div class="flex items-center justify-between gap-1">
-                      <div class="flex items-center gap-1.5 min-w-0">
-                        <strong class="text-slate-900 font-bold text-sm truncate">${this.escapeHtml(chunkPhrase)}</strong>
-                        <button onclick="app.speakText('${this.escapeQuotes(chunkPhrase)}')" class="p-1 text-blue-600 hover:text-blue-800 transition cursor-pointer" title="Phát âm cụm này">
-                          <i class="fa-solid fa-volume-high text-xs"></i>
-                        </button>
+                  <div class="vachla-flip-scene">
+                    <div id="vachLaCard_${sIdx}_${cIdx}" onclick="app.toggleVachLaCardFlip('vachLaCard_${sIdx}_${cIdx}')" class="vachla-flip-card shadow-2xs hover:shadow-md transition-shadow">
+                      
+                      <!-- MẶT TRƯỚC (FRONT FACE - NHẬN DIỆN & PHÁT ÂM) -->
+                      <div class="vachla-flip-face vachla-flip-front bg-gradient-to-b from-white to-slate-50 border border-slate-200 hover:border-blue-300 p-3.5 flex flex-col justify-between text-xs">
+                        
+                        <!-- Top: Tag & Delete -->
+                        <div class="flex items-center justify-between gap-1">
+                          <span class="text-[10px] px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-mono border border-blue-200 font-bold tracking-tight">
+                            🏷️ ${this.escapeHtml(chunkType)}
+                          </span>
+                          <button onclick="event.stopPropagation(); app.deleteVachLaChunk(${sIdx}, ${cIdx})" class="p-1 px-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" title="Xóa thẻ này">
+                            <i class="fa-regular fa-trash-can text-xs"></i>
+                          </button>
+                        </div>
+
+                        <!-- Center: English Phrase & Audio/IPA (Fully Legible, No Truncate) -->
+                        <div class="space-y-1.5 my-auto text-center py-2">
+                          <div class="flex items-center justify-center gap-2 flex-wrap px-1">
+                            <span class="text-slate-900 font-extrabold text-base tracking-tight font-heading leading-tight break-words max-w-full">${this.escapeHtml(chunkPhrase)}</span>
+                            <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(chunkPhrase)}')" class="w-7 h-7 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center border border-blue-200 transition active:scale-95 shadow-2xs shrink-0 cursor-pointer" title="Nghe phát âm bản xứ">
+                              <i class="fa-solid fa-volume-high text-xs"></i>
+                            </button>
+                          </div>
+                          
+                          <div>
+                            <span class="text-indigo-700 font-mono text-[11px] font-bold bg-indigo-50/80 px-2.5 py-0.5 rounded-full border border-indigo-100 inline-block">
+                              /${this.escapeHtml(chunkIpa.replace(/^\/|\/$/g, ''))}/
+                            </span>
+                          </div>
+                        </div>
+
+                        <!-- Bottom: Flip Hint -->
+                        <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-blue-600 font-medium">
+                          <span class="flex items-center gap-1 text-slate-500 font-medium text-[10px]">
+                            <i class="fa-solid fa-lightbulb text-amber-500 text-[10px]"></i>
+                            <span>Thử nhớ nghĩa...</span>
+                          </span>
+                          <span class="flex items-center gap-1 text-blue-600 font-bold hover:text-blue-800 text-[11px]">
+                            <span>Xem nghĩa</span>
+                            <i class="fa-solid fa-arrow-rotate-right text-[10px]"></i>
+                          </span>
+                        </div>
+
                       </div>
 
-                      <div class="flex items-center gap-1.5 shrink-0">
-                        <span class="text-[10px] px-1.5 py-0.5 rounded-md bg-white text-slate-600 font-mono border border-slate-200 font-semibold">${this.escapeHtml(chunkType)}</span>
-                        <!-- Delete Chunk Button -->
-                        <button onclick="app.deleteVachLaChunk(${sIdx}, ${cIdx})" class="p-1 px-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" title="Xóa thẻ cụm từ này">
-                          <i class="fa-regular fa-trash-can text-xs"></i>
-                        </button>
+                      <!-- MẶT SAU (BACK FACE - NGHĨA & SIMPLE ENGLISH & HÀNH ĐỘNG) -->
+                      <div class="vachla-flip-face vachla-flip-back bg-gradient-to-b from-blue-50/50 via-white to-slate-50 border border-blue-300 p-3.5 flex flex-col justify-between text-xs">
+                        
+                        <!-- Top: Header Label & Flip Back Icon -->
+                        <div class="flex items-center justify-between pb-1 border-b border-blue-100">
+                          <span class="text-[10px] font-extrabold uppercase tracking-wider text-blue-800 flex items-center gap-1 font-mono">
+                            <i class="fa-solid fa-circle-check text-emerald-500 text-xs"></i>
+                            <span>Giải Nghĩa Ngữ Cảnh</span>
+                          </span>
+                          <button onclick="event.stopPropagation(); app.toggleVachLaCardFlip('vachLaCard_${sIdx}_${cIdx}')" class="text-slate-400 hover:text-blue-600 text-[11px] flex items-center gap-1 font-bold cursor-pointer" title="Lật lại mặt trước">
+                            <span>Lật lại</span>
+                            <i class="fa-solid fa-rotate-left text-xs"></i>
+                          </button>
+                        </div>
+
+                        <!-- Center: Vietnamese Meaning + Simple English Box -->
+                        <div class="space-y-1.5 my-auto py-1">
+                          <div>
+                            <p class="text-[10px] text-slate-400 font-semibold uppercase font-sans">Nghĩa tiếng Việt:</p>
+                            <p class="text-slate-900 font-bold text-xs sm:text-sm leading-snug break-words">${this.escapeHtml(chunkMeaning)}</p>
+                          </div>
+
+                          <div class="bg-indigo-50/60 p-2 rounded-xl border border-indigo-100/80 space-y-0.5">
+                            <p class="text-indigo-900 font-bold text-[10px] flex items-center gap-1">
+                              <i class="fa-solid fa-book-open text-indigo-600 text-[10px]"></i>
+                              <span>Simple English:</span>
+                            </p>
+                            <p class="text-slate-700 text-[11px] leading-relaxed font-normal line-clamp-2">
+                              ${this.escapeHtml(simpleEnglish)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <!-- Bottom Action Buttons: YouGlish + Lưu Thẻ 3D -->
+                        <div class="flex items-center justify-between pt-1.5 border-t border-slate-100 gap-1.5">
+                          <button onclick="event.stopPropagation(); app.openYouGlish('${this.escapeQuotes(chunkPhrase)}')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-blue-700 border border-slate-200 text-[11px] font-bold flex items-center gap-1 transition shadow-2xs cursor-pointer active:scale-95" title="Xem người bản xứ phát âm cụm này trên YouGlish">
+                            <i class="fa-solid fa-earth-americas text-blue-500 text-[10px]"></i>
+                            <span>YouGlish</span>
+                          </button>
+                          <button onclick="event.stopPropagation(); app.saveVocabCard('${this.escapeQuotes(chunkPhrase)}', '${this.escapeQuotes(chunkMeaning)}', '${this.escapeQuotes(chunkIpa)}', '${this.escapeQuotes(simpleEnglish)}', '${this.escapeQuotes(englishText)}', '${this.escapeQuotes(chunkType)}')" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 transition shadow-xs cursor-pointer active:scale-95">
+                            <i class="fa-solid fa-star text-amber-300 text-[10px]"></i>
+                            <span>+ Lưu Thẻ 3D</span>
+                          </button>
+                        </div>
+
                       </div>
-                    </div>
 
-                    <!-- Individual IPA -->
-                    <div class="flex items-center gap-1 text-[11px] text-indigo-700 font-mono font-semibold bg-white/70 px-2 py-0.5 rounded-lg border border-slate-200/60 w-fit">
-                      <span class="text-slate-400 font-sans text-[10px]">IPA:</span>
-                      <span>/${this.escapeHtml(chunkIpa.replace(/^\/|\/$/g, ''))}/</span>
-                    </div>
-
-                    <!-- Vietnamese Meaning -->
-                    <p class="text-slate-700 text-xs"><span class="text-slate-400 font-medium">Nghĩa:</span> <strong class="text-slate-900 font-bold">${this.escapeHtml(chunkMeaning)}</strong></p>
-
-                    <!-- Simple English Definition -->
-                    <div class="bg-indigo-50/70 p-2.5 rounded-xl border border-indigo-200/70 space-y-1">
-                      <p class="text-indigo-900 font-bold text-[10px] flex items-center gap-1">
-                        <i class="fa-solid fa-book-open text-indigo-600 text-[10px]"></i>
-                        <span>📖 Simple English:</span>
-                      </p>
-                      <p class="text-indigo-950 text-xs leading-relaxed font-normal">
-                        ${this.escapeHtml(simpleEnglish)}
-                      </p>
-                    </div>
-                    
-                    <!-- Footer Actions -->
-                    <div class="flex items-center justify-between pt-1.5 border-t border-slate-200">
-                      <button onclick="app.openYouGlish('${this.escapeQuotes(chunkPhrase)}')" class="text-[11px] text-blue-600 hover:underline flex items-center gap-1 font-semibold cursor-pointer" title="Xem người bản xứ phát âm cụm này trên YouGlish">
-                        <i class="fa-solid fa-earth-americas text-[10px]"></i>
-                        <span>YouGlish</span>
-                      </button>
-                      <button onclick="app.saveVocabCard('${this.escapeQuotes(chunkPhrase)}', '${this.escapeQuotes(chunkMeaning)}', '${this.escapeQuotes(chunkIpa)}', '${this.escapeQuotes(simpleEnglish)}')" class="px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] font-bold flex items-center gap-1 transition border border-blue-200 cursor-pointer shadow-2xs">
-                        <i class="fa-solid fa-star text-amber-500 text-[10px]"></i>
-                        <span>+ Lưu Thẻ 3D</span>
-                      </button>
                     </div>
                   </div>
                 `;
@@ -2889,6 +2933,16 @@ Return ONLY a valid JSON object with the following schema:
 
       resultsList.appendChild(card);
     });
+  }
+
+  /**
+   * Toggle 3D flip on a specific Vach La chunk card
+   */
+  toggleVachLaCardFlip(cardId) {
+    const card = document.getElementById(cardId);
+    if (card) {
+      card.classList.toggle('is-flipped');
+    }
   }
 
   /**
@@ -5491,6 +5545,7 @@ ${rawTranscriptContent}
 --- YÊU CẦU ĐẦU RA ---
 - Chỉ xuất ra danh sách các dòng phụ đề theo đúng mốc thời gian từ đầu đến hết video.
 - Không bao gồm link video, lời chào hoặc giải thích ngoài lề trong câu trả lời.
+- Ưu tiên chia phụ đề ngắn nhưng vẫn đúng ngữ pháp.
 
 --- ĐỊNH DẠNG ĐẦU RA MẪU: ---
 [00:00.2 - 00:03.5] Hi there, and welcome to the Five Minute English Podcast,
