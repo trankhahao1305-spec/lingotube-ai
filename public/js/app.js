@@ -2662,7 +2662,6 @@ Return ONLY a valid JSON object with the following schema:
     const emptyState = document.getElementById('vachLaEmptyState');
     const loadingState = document.getElementById('vachLaLoadingState');
     const resultsList = document.getElementById('vachLaResultsList');
-    const badge = document.getElementById('vachLaSourceBadge');
 
     if (emptyState) emptyState.classList.add('hidden');
     if (loadingState) loadingState.classList.add('hidden');
@@ -2671,22 +2670,12 @@ Return ONLY a valid JSON object with the following schema:
     resultsList.innerHTML = '';
     resultsList.classList.remove('hidden');
 
-    if (badge) {
-      if (data.source === 'gemini') {
-        badge.textContent = 'Gemini 1.5 Flash (AI)';
-        badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-mono border border-blue-200 font-bold';
-      } else {
-        badge.textContent = 'Phonetic IPA & Grammar Parser';
-        badge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-mono border border-slate-200 font-bold';
-      }
-    }
-
     const sentences = data.sentences || [];
     if (sentences.length === 0) {
       resultsList.innerHTML = `
         <div class="p-8 text-center text-slate-400 space-y-2">
           <i class="fa-solid fa-circle-exclamation text-3xl text-slate-300"></i>
-          <p class="text-xs text-slate-600">Không có dữ liệu phân tích cho đoạn clip này. Hãy bấm "Phân tích lại AI".</p>
+          <p class="text-xs text-slate-600">Không có dữ liệu phân tích cho đoạn clip này.</p>
         </div>
       `;
       return;
@@ -2701,22 +2690,22 @@ Return ONLY a valid JSON object with the following schema:
         <span>Đoạn clip đang phân tích: <strong class="text-blue-700 font-mono font-bold">${this.formatSeconds(this.clipRange.start, true)} → ${this.formatSeconds(this.clipRange.end, true)}</strong></span>
       </div>
       <div class="flex items-center gap-2">
-        <span class="px-2 py-0.5 rounded-full bg-white text-slate-700 font-mono text-[11px] border border-blue-200 font-bold shadow-2xs">${sentences.length} câu đã cắt</span>
-        <button onclick="app.toggleAllVachLaChunks(true)" class="px-2.5 py-0.5 rounded-lg bg-white hover:bg-slate-100 text-blue-700 font-semibold border border-blue-200 text-[11px] shadow-2xs transition flex items-center gap-1 cursor-pointer" title="Mở rộng tất cả các cụm từ">
-          <i class="fa-solid fa-folder-open text-blue-600 text-[10px]"></i>
-          <span>Mở tất cả</span>
+        <span class="px-2 py-0.5 rounded-full bg-white text-slate-700 font-mono text-[11px] border border-blue-200 font-bold shadow-2xs">${sentences.length} câu</span>
+        <button onclick="app.toggleAllVachLaSentences(true)" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-blue-700 font-semibold border border-blue-200 text-[11px] shadow-2xs transition flex items-center gap-1 cursor-pointer" title="Lật tất cả sang Mặt 2 (Bản dịch & Cụm từ)">
+          <i class="fa-solid fa-rotate text-blue-600 text-[10px]"></i>
+          <span>Lật xem tất cả</span>
         </button>
-        <button onclick="app.toggleAllVachLaChunks(false)" class="px-2.5 py-0.5 rounded-lg bg-white hover:bg-slate-100 text-slate-600 font-semibold border border-slate-200 text-[11px] shadow-2xs transition flex items-center gap-1 cursor-pointer" title="Thu gọn tất cả các cụm từ">
-          <i class="fa-solid fa-folder-closed text-slate-400 text-[10px]"></i>
-          <span>Thu gọn</span>
+        <button onclick="app.toggleAllVachLaSentences(false)" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-600 font-semibold border border-slate-200 text-[11px] shadow-2xs transition flex items-center gap-1 cursor-pointer" title="Lật tất cả về Mặt 1 (Tiếng Anh)">
+          <i class="fa-solid fa-rotate-left text-slate-400 text-[10px]"></i>
+          <span>Về mặt trước</span>
         </button>
       </div>
     `;
     resultsList.appendChild(clipBanner);
 
     sentences.forEach((item, sIdx) => {
-      const card = document.createElement('div');
-      card.className = 'glass-card p-4 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-3 transition hover:border-blue-300';
+      const scene = document.createElement('div');
+      scene.className = 'vachla-sentence-scene';
 
       const englishText = item.english || '';
       const vietnameseText = item.vietnamese || this.translateToVietnamese(englishText);
@@ -2725,292 +2714,194 @@ Return ONLY a valid JSON object with the following schema:
       const startTime = item.startTime !== undefined ? item.startTime : (this.clipRange.start);
       const endTime = item.endTime !== undefined ? item.endTime : (this.clipRange.end);
 
-      // Highlight chunks inside English sentence with click-to-expand
+      // Highlight chunks inside English sentence with click-to-flip
       let highlightedHtml = this.escapeHtml(englishText);
-      chunks.forEach((chk, cIdx) => {
+      chunks.forEach((chk) => {
         if (chk.phrase && chk.phrase.trim()) {
           const phraseRegex = new RegExp(`(${this.escapeRegex(chk.phrase)})`, 'gi');
-          highlightedHtml = highlightedHtml.replace(phraseRegex, `<mark onclick="app.toggleVachLaSentenceChunks(${sIdx}, true)" class="bg-blue-100 text-blue-900 border-b-2 border-blue-500 px-1 rounded font-bold cursor-pointer hover:bg-blue-200 transition" title="Bấm để xem chi tiết cụm: ${this.escapeHtml(chk.meaning || '')}">$1</mark>`);
+          highlightedHtml = highlightedHtml.replace(phraseRegex, `<mark class="bg-blue-100 text-blue-950 border-b-2 border-blue-500 px-1 rounded font-bold hover:bg-blue-200 transition" title="Cụm từ: ${this.escapeHtml(chk.meaning || '')}">$1</mark>`);
         }
       });
 
-      const chunkPhrasePreview = chunks.map(c => this.escapeHtml(c.phrase || '')).filter(Boolean).join(', ');
-
-      card.innerHTML = `
-        <!-- Top Fixed Control Bar -->
-        <div class="p-3 pb-2.5 border-b border-slate-100 flex items-center justify-between gap-2 text-xs flex-wrap bg-slate-50/70">
-          <div class="flex items-center gap-2">
-            <span class="font-bold font-mono px-2 py-0.5 rounded bg-slate-200 text-slate-800 border border-slate-300">#${sIdx + 1}</span>
-            <span class="font-mono text-[11px] text-blue-600 font-bold cursor-pointer hover:underline" onclick="app.seekTo(${startTime})">
-              <i class="fa-regular fa-clock text-[10px]"></i> ${this.formatSeconds(startTime, true)} - ${this.formatSeconds(endTime, true)}
-            </span>
-          </div>
-
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <!-- Jump to video timestamp -->
-            <button onclick="app.seekTo(${startTime})" title="Xem video tại thời điểm câu này" class="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 text-[11px] flex items-center gap-1 transition font-medium border border-slate-200 shadow-2xs cursor-pointer">
-              <i class="fa-solid fa-play text-blue-600 text-[10px]"></i>
-              <span>Xem video</span>
-            </button>
-            <!-- Speak audio button -->
-            <button onclick="app.speakText('${this.escapeQuotes(englishText)}')" title="Nghe phát âm bản xứ câu này" class="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] flex items-center gap-1 transition font-medium border border-blue-200 shadow-2xs cursor-pointer">
-              <i class="fa-solid fa-volume-high text-blue-600 text-[10px]"></i>
-              <span>Phát âm</span>
-            </button>
-            <!-- Copy button -->
-            <button onclick="app.copyText('${this.escapeQuotes(englishText)}')" title="Sao chép câu" class="p-1 px-2 rounded-lg bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-900 text-xs border border-slate-200 shadow-2xs transition cursor-pointer">
-              <i class="fa-regular fa-copy"></i>
-            </button>
-            <!-- Delete Sentence Button -->
-            <button onclick="app.deleteVachLaSentence(${sIdx})" title="Xóa câu này khỏi danh sách phân tích" class="p-1 px-2 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 text-xs border border-slate-200 shadow-2xs transition cursor-pointer">
-              <i class="fa-regular fa-trash-can"></i>
-            </button>
-          </div>
-        </div>
-
-        <!-- 2-Sided Interactive Flip Content Area -->
-        <div class="p-3.5 pt-2.5 space-y-3">
+      scene.innerHTML = `
+        <div id="vachLaSentenceCard_${sIdx}" onclick="app.toggleVachLaSentenceFlip(${sIdx})" class="vachla-sentence-card shadow-sm hover:shadow-md transition-all group">
           
-          <!-- Face Toggle Switch -->
-          <div class="flex items-center justify-between gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs">
-            <button 
-              type="button"
-              onclick="app.setVachLaSentenceFace(${sIdx}, 'front')" 
-              id="btnSentenceFaceFront_${sIdx}" 
-              class="flex-1 py-1.5 px-2.5 rounded-lg bg-white text-blue-700 font-bold shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer text-xs"
-            >
-              <i class="fa-solid fa-headphones text-blue-600 text-[11px]"></i>
-              <span>Mặt 1: Câu Tiếng Anh & IPA</span>
-            </button>
-            <button 
-              type="button"
-              onclick="app.setVachLaSentenceFace(${sIdx}, 'back')" 
-              id="btnSentenceFaceBack_${sIdx}" 
-              class="flex-1 py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-slate-900 font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer text-xs"
-            >
-              <i class="fa-solid fa-language text-emerald-600 text-xs"></i>
-              <span>Mặt 2: Bản Dịch & Cụm Từ (${chunks.length})</span>
-            </button>
-          </div>
-
-          <!-- MẶT 1 (FRONT): CÂU TIẾNG ANH & FULL LEGIBLE IPA -->
-          <div id="sentenceFaceFront_${sIdx}" class="space-y-3">
-            <div class="p-3 rounded-xl bg-slate-50/70 border border-slate-200/80">
-              <p class="text-base text-slate-900 font-bold leading-relaxed font-heading break-words">${highlightedHtml}</p>
-            </div>
-
-            <!-- Full Multi-line IPA without truncation -->
-            ${ipaText ? `
-              <div class="flex items-start justify-between bg-indigo-50/50 px-3.5 py-2.5 rounded-xl border border-indigo-100 text-xs font-mono text-indigo-800 gap-2">
-                <div class="flex items-start gap-2 flex-1 min-w-0">
-                  <span class="text-indigo-500 text-[10px] uppercase font-sans font-bold shrink-0 mt-0.5">🗣️ IPA:</span>
-                  <span class="tracking-wide select-all font-semibold break-words whitespace-normal leading-relaxed">${this.escapeHtml(ipaText)}</span>
-                </div>
-                <button onclick="app.copyText('${this.escapeQuotes(ipaText)}')" class="text-indigo-400 hover:text-indigo-700 text-xs p-1 shrink-0 cursor-pointer" title="Copy IPA">
-                  <i class="fa-regular fa-copy"></i>
-                </button>
-              </div>
-            ` : ''}
-
-            <!-- Flip Action Hint Button -->
-            <button 
-              type="button"
-              onclick="app.setVachLaSentenceFace(${sIdx}, 'back')" 
-              class="w-full py-2 px-3.5 rounded-xl bg-blue-50/80 hover:bg-blue-100 border border-blue-200 text-blue-700 text-xs font-bold transition flex items-center justify-between shadow-2xs cursor-pointer group active:scale-98"
-            >
-              <div class="flex items-center gap-1.5">
-                <i class="fa-solid fa-lightbulb text-amber-500 text-xs"></i>
-                <span>Xem Bản Dịch & Bóc Tách ${chunks.length} Cụm Từ</span>
-              </div>
-              <i class="fa-solid fa-arrow-right text-[11px] group-hover:translate-x-0.5 transition-transform"></i>
-            </button>
-          </div>
-
-          <!-- MẶT 2 (BACK): BẢN DỊCH TIẾNG VIỆT & THẺ LẬT 3D CỤM TỪ -->
-          <div id="sentenceFaceBack_${sIdx}" class="hidden space-y-3">
-            <div class="bg-blue-50/50 p-3 rounded-xl border border-blue-200 text-xs text-slate-800 leading-relaxed space-y-1">
-              <div class="flex items-center justify-between">
-                <span class="text-[10px] font-extrabold uppercase tracking-wider text-blue-700 flex items-center gap-1 font-mono">
-                  <i class="fa-solid fa-language text-blue-600 text-sm"></i>
-                  <span>Bản Dịch Tiếng Việt:</span>
+          <!-- MẶT 1 (FRONT): CÂU TIẾNG ANH & FULL IPA -->
+          <div class="vachla-sentence-face vachla-sentence-front bg-white border border-slate-200 group-hover:border-blue-300 p-3.5 sm:p-4 flex flex-col justify-between shadow-2xs">
+            
+            <!-- Top Fixed Control Bar -->
+            <div class="flex items-center justify-between pb-2.5 border-b border-slate-100 gap-2">
+              <div class="flex items-center gap-2">
+                <span class="font-bold font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-[11px] border border-slate-200">#${sIdx + 1}</span>
+                <span class="font-mono text-[11px] text-blue-600 font-bold hover:underline cursor-pointer" onclick="event.stopPropagation(); app.seekTo(${startTime})">
+                  <i class="fa-regular fa-clock text-[10px]"></i> ${this.formatSeconds(startTime, true)} - ${this.formatSeconds(endTime, true)}
                 </span>
-                <button type="button" onclick="app.setVachLaSentenceFace(${sIdx}, 'front')" class="text-[11px] text-blue-600 hover:underline font-bold flex items-center gap-1 cursor-pointer">
-                  <i class="fa-solid fa-arrow-left text-[10px]"></i>
-                  <span>Xem lại câu</span>
+              </div>
+
+              <div class="flex items-center gap-1 sm:gap-1.5">
+                <button onclick="event.stopPropagation(); app.seekTo(${startTime})" title="Xem video tại câu này" class="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-[11px] flex items-center gap-1 font-medium border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
+                  <i class="fa-solid fa-play text-blue-600 text-[10px]"></i>
+                  <span class="hidden sm:inline">Xem video</span>
+                </button>
+                <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(englishText)}')" title="Nghe phát âm bản xứ" class="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] flex items-center gap-1 font-medium border border-blue-200 shadow-2xs cursor-pointer active:scale-95">
+                  <i class="fa-solid fa-volume-high text-blue-600 text-[10px]"></i>
+                  <span>Phát âm</span>
+                </button>
+                <button onclick="event.stopPropagation(); app.copyText('${this.escapeQuotes(englishText)}')" title="Sao chép câu" class="p-1 px-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 text-xs border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
+                  <i class="fa-regular fa-copy text-[11px]"></i>
+                </button>
+                <button onclick="event.stopPropagation(); app.deleteVachLaSentence(${sIdx})" title="Xóa câu này" class="p-1 px-1.5 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 text-xs border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
+                  <i class="fa-regular fa-trash-can text-[11px]"></i>
                 </button>
               </div>
-              <p class="font-bold text-slate-900 text-sm leading-relaxed break-words">${this.escapeHtml(vietnameseText)}</p>
             </div>
 
-            <!-- Chunks 3D Cards -->
-            ${chunks.length > 0 ? `
-              <div class="space-y-2 pt-1 border-t border-slate-100">
-                <div class="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                  <i class="fa-solid fa-cubes text-blue-600"></i>
-                  <span>Chi tiết ${chunks.length} cụm từ then chốt (Thẻ lật 3D):</span>
+            <!-- English Sentence Body -->
+            <div class="my-3 space-y-2">
+              <p class="text-base sm:text-lg text-slate-900 font-bold leading-relaxed font-heading break-words select-text">${highlightedHtml}</p>
+              
+              <!-- Full Multi-line IPA without truncation -->
+              ${ipaText ? `
+                <div class="flex items-start justify-between bg-indigo-50/60 px-3 py-2 rounded-xl border border-indigo-100 text-xs font-mono text-indigo-900 gap-2">
+                  <div class="flex items-start gap-1.5 flex-1 min-w-0">
+                    <span class="text-indigo-500 text-[10px] uppercase font-sans font-bold shrink-0 mt-0.5">🗣️ IPA:</span>
+                    <span class="tracking-wide select-all font-semibold break-words whitespace-normal leading-relaxed text-[11px] sm:text-xs">${this.escapeHtml(ipaText)}</span>
+                  </div>
+                  <button onclick="event.stopPropagation(); app.copyText('${this.escapeQuotes(ipaText)}')" class="text-indigo-400 hover:text-indigo-700 text-xs p-0.5 shrink-0 cursor-pointer active:scale-95" title="Copy IPA">
+                    <i class="fa-regular fa-copy text-[10px]"></i>
+                  </button>
                 </div>
+              ` : ''}
+            </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  ${chunks.map((chk, cIdx) => {
-                    const chunkPhrase = chk.phrase || '';
-                    const chunkIpa = chk.ipa || this.convertToIPA(chunkPhrase);
-                    const chunkMeaning = (chk.meaning && !chk.meaning.startsWith('Cụm từ then chốt') && !chk.meaning.startsWith('Cụm từ ngữ cảnh') && !chk.meaning.startsWith('Cụm từ trọng tâm'))
-                      ? chk.meaning
-                      : this.translateToVietnamese(chunkPhrase);
-                    const simpleEnglish = chk.simpleEnglish || chk.definition || `used to express "${chunkPhrase}" naturally in English.`;
-                    const chunkType = chk.grammar || 'Collocation / Phrase';
+            <!-- Bottom: Tap to Flip Footer Hint -->
+            <div class="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-blue-600 font-medium">
+              <span class="flex items-center gap-1.5 text-slate-400 text-[10px] sm:text-[11px]">
+                <i class="fa-solid fa-hand-pointer text-blue-500 text-[10px] animate-bounce"></i>
+                <span>Chạm vào thẻ để lật xem bản dịch</span>
+              </span>
+              <span class="flex items-center gap-1 text-blue-600 font-bold hover:text-blue-800 text-[11px]">
+                <span>Bản dịch & Cụm từ (${chunks.length})</span>
+                <i class="fa-solid fa-arrow-rotate-right text-[10px]"></i>
+              </span>
+            </div>
 
-                    return `
-                      <div class="vachla-flip-scene">
-                        <div id="vachLaCard_${sIdx}_${cIdx}" onclick="app.toggleVachLaCardFlip('vachLaCard_${sIdx}_${cIdx}')" class="vachla-flip-card shadow-2xs hover:shadow-md transition-shadow">
-                          
-                          <!-- MẶT TRƯỚC (FRONT FACE - NHẬN DIỆN & PHÁT ÂM) -->
-                          <div class="vachla-flip-face vachla-flip-front bg-gradient-to-b from-white to-slate-50 border border-slate-200 hover:border-blue-300 p-3.5 flex flex-col justify-between text-xs">
-                            
-                            <!-- Top: Tag & Delete -->
-                            <div class="flex items-center justify-between gap-1">
-                              <span class="text-[10px] px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-mono border border-blue-200 font-bold tracking-tight">
-                                🏷️ ${this.escapeHtml(chunkType)}
-                              </span>
-                              <button onclick="event.stopPropagation(); app.deleteVachLaChunk(${sIdx}, ${cIdx})" class="p-1 px-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" title="Xóa thẻ này">
-                                <i class="fa-regular fa-trash-can text-xs"></i>
-                              </button>
-                            </div>
+          </div>
 
-                            <!-- Center: English Phrase & Audio/IPA -->
-                            <div class="space-y-1.5 my-auto text-center py-2">
-                              <div class="flex items-center justify-center gap-2 flex-wrap px-1">
-                                <span class="text-slate-900 font-extrabold text-base tracking-tight font-heading leading-tight break-words max-w-full">${this.escapeHtml(chunkPhrase)}</span>
-                                <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(chunkPhrase)}')" class="w-7 h-7 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 flex items-center justify-center border border-blue-200 transition active:scale-95 shadow-2xs shrink-0 cursor-pointer" title="Nghe phát âm bản xứ">
-                                  <i class="fa-solid fa-volume-high text-xs"></i>
-                                </button>
-                              </div>
-                              
-                              <div>
-                                <span class="text-indigo-700 font-mono text-[11px] font-bold bg-indigo-50/80 px-2.5 py-0.5 rounded-full border border-indigo-100 inline-block">
-                                  /${this.escapeHtml(chunkIpa.replace(/^\/|\/$/g, ''))}/
-                                </span>
-                              </div>
-                            </div>
-
-                            <!-- Bottom: Flip Hint -->
-                            <div class="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-blue-600 font-medium">
-                              <span class="flex items-center gap-1 text-slate-500 font-medium text-[10px]">
-                                <i class="fa-solid fa-lightbulb text-amber-500 text-[10px]"></i>
-                                <span>Thử nhớ nghĩa...</span>
-                              </span>
-                              <span class="flex items-center gap-1 text-blue-600 font-bold hover:text-blue-800 text-[11px]">
-                                <span>Xem nghĩa</span>
-                                <i class="fa-solid fa-arrow-rotate-right text-[10px]"></i>
-                              </span>
-                            </div>
-
-                          </div>
-
-                          <!-- MẶT SAU (BACK FACE - NGHĨA & SIMPLE ENGLISH & HÀNH ĐỘNG) -->
-                          <div class="vachla-flip-face vachla-flip-back bg-gradient-to-b from-blue-50/50 via-white to-slate-50 border border-blue-300 p-3.5 flex flex-col justify-between text-xs">
-                            
-                            <!-- Top: Header Label & Flip Back Icon -->
-                            <div class="flex items-center justify-between pb-1 border-b border-blue-100">
-                              <span class="text-[10px] font-extrabold uppercase tracking-wider text-blue-800 flex items-center gap-1 font-mono">
-                                <i class="fa-solid fa-circle-check text-emerald-500 text-xs"></i>
-                                <span>Giải Nghĩa Ngữ Cảnh</span>
-                              </span>
-                              <button onclick="event.stopPropagation(); app.toggleVachLaCardFlip('vachLaCard_${sIdx}_${cIdx}')" class="text-slate-400 hover:text-blue-600 text-[11px] flex items-center gap-1 font-bold cursor-pointer" title="Lật lại mặt trước">
-                                <span>Lật lại</span>
-                                <i class="fa-solid fa-rotate-left text-xs"></i>
-                              </button>
-                            </div>
-
-                            <!-- Center: Vietnamese Meaning + Simple English Box -->
-                            <div class="space-y-1.5 my-auto py-1">
-                              <div>
-                                <p class="text-[10px] text-slate-400 font-semibold uppercase font-sans">Nghĩa tiếng Việt:</p>
-                                <p class="text-slate-900 font-bold text-xs sm:text-sm leading-snug break-words">${this.escapeHtml(chunkMeaning)}</p>
-                              </div>
-
-                              <div class="bg-indigo-50/60 p-2 rounded-xl border border-indigo-100/80 space-y-0.5">
-                                <p class="text-indigo-900 font-bold text-[10px] flex items-center gap-1">
-                                  <i class="fa-solid fa-book-open text-indigo-600 text-[10px]"></i>
-                                  <span>Simple English:</span>
-                                </p>
-                                <p class="text-slate-700 text-[11px] leading-relaxed font-normal line-clamp-2">
-                                  ${this.escapeHtml(simpleEnglish)}
-                                </p>
-                              </div>
-                            </div>
-
-                            <!-- Bottom Action Buttons: YouGlish + Lưu Thẻ 3D -->
-                            <div class="flex items-center justify-between pt-1.5 border-t border-slate-100 gap-1.5">
-                              <button onclick="event.stopPropagation(); app.openYouGlish('${this.escapeQuotes(chunkPhrase)}')" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-blue-700 border border-slate-200 text-[11px] font-bold flex items-center gap-1 transition shadow-2xs cursor-pointer active:scale-95" title="Xem người bản xứ phát âm cụm này trên YouGlish">
-                                <i class="fa-solid fa-earth-americas text-blue-500 text-[10px]"></i>
-                                <span>YouGlish</span>
-                              </button>
-                              <button onclick="event.stopPropagation(); app.saveVocabCard('${this.escapeQuotes(chunkPhrase)}', '${this.escapeQuotes(chunkMeaning)}', '${this.escapeQuotes(chunkIpa)}', '${this.escapeQuotes(simpleEnglish)}', '${this.escapeQuotes(englishText)}', '${this.escapeQuotes(chunkType)}')" class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 transition shadow-xs cursor-pointer active:scale-95">
-                                <i class="fa-solid fa-star text-amber-300 text-[10px]"></i>
-                                <span>+ Lưu Thẻ 3D</span>
-                              </button>
-                            </div>
-
-                          </div>
-
-                        </div>
-                      </div>
-                    `;
-                  }).join('')}
-                </div>
+          <!-- MẶT 2 (BACK): BẢN DỊCH & CỤM TỪ THEN CHỐT -->
+          <div class="vachla-sentence-face vachla-sentence-back bg-gradient-to-b from-blue-50/70 via-white to-slate-50 border-2 border-blue-300 p-3.5 sm:p-4 flex flex-col justify-between shadow-sm">
+            
+            <!-- Top Bar -->
+            <div class="flex items-center justify-between pb-2 border-b border-blue-100 gap-2">
+              <div class="flex items-center gap-2">
+                <span class="font-bold font-mono px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[11px] border border-blue-200">#${sIdx + 1}</span>
+                <span class="text-[10px] font-extrabold uppercase tracking-wider text-blue-800 font-mono flex items-center gap-1">
+                  <i class="fa-solid fa-circle-check text-emerald-600 text-xs"></i>
+                  <span>Bản Dịch & Bóc Tách Cụm Từ</span>
+                </span>
               </div>
-            ` : ''}
+              <div class="flex items-center gap-1">
+                <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(englishText)}')" title="Phát âm tiếng Anh" class="p-1 px-2 rounded-lg bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 text-xs shadow-2xs cursor-pointer active:scale-95">
+                  <i class="fa-solid fa-volume-high text-[10px]"></i>
+                </button>
+                <button onclick="event.stopPropagation(); app.seekTo(${startTime})" title="Xem video" class="p-1 px-2 rounded-lg bg-white hover:bg-blue-50 text-slate-600 border border-slate-200 text-xs shadow-2xs cursor-pointer active:scale-95">
+                  <i class="fa-solid fa-play text-blue-600 text-[10px]"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Center: Vietnamese Translation & Chunks -->
+            <div class="my-2 space-y-2.5">
+              <div class="bg-white/90 p-2.5 rounded-xl border border-blue-200/70 shadow-2xs space-y-0.5">
+                <span class="text-[10px] text-blue-700 font-bold uppercase tracking-wider font-mono">Bản Dịch Tiếng Việt:</span>
+                <p class="text-slate-900 font-bold text-sm sm:text-base leading-relaxed break-words">${this.escapeHtml(vietnameseText)}</p>
+              </div>
+
+              <!-- Chunks list -->
+              ${chunks.length > 0 ? `
+                <div class="space-y-1.5">
+                  <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-1">
+                    <i class="fa-solid fa-cubes text-blue-600 text-[10px]"></i>
+                    <span>${chunks.length} Cụm từ then chốt:</span>
+                  </span>
+                  <div class="space-y-1.5 max-h-48 overflow-y-auto pr-0.5">
+                    ${chunks.map((chk, cIdx) => `
+                      <div class="p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-300 shadow-2xs space-y-1 transition text-xs">
+                        <div class="flex items-center justify-between gap-1">
+                          <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="font-extrabold text-slate-900 text-xs">${this.escapeHtml(chk.phrase || '')}</span>
+                            <span class="text-indigo-700 font-mono text-[10px] bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100 font-semibold">/${this.escapeHtml((chk.ipa || '').replace(/^\/|\/$/g, ''))}/</span>
+                            <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-mono">${this.escapeHtml(chk.grammar || 'Collocation')}</span>
+                          </div>
+                          <div class="flex items-center gap-1 shrink-0">
+                            <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(chk.phrase || '')}')" class="w-6 h-6 rounded bg-slate-50 hover:bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] border border-slate-200 cursor-pointer active:scale-95" title="Phát âm">
+                              <i class="fa-solid fa-volume-high"></i>
+                            </button>
+                            <button onclick="event.stopPropagation(); app.openYouGlish('${this.escapeQuotes(chk.phrase || '')}')" class="px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold border border-blue-200 flex items-center gap-0.5 cursor-pointer active:scale-95" title="Xem trên YouGlish">
+                              <i class="fa-solid fa-earth-americas text-[9px]"></i>
+                              <span>YG</span>
+                            </button>
+                            <button onclick="event.stopPropagation(); app.saveVocabCard('${this.escapeQuotes(chk.phrase || '')}', '${this.escapeQuotes(chk.meaning || '')}', '${this.escapeQuotes(chk.ipa || '')}', '${this.escapeQuotes(chk.simpleEnglish || '')}', '${this.escapeQuotes(englishText)}', '${this.escapeQuotes(chk.grammar || '')}')" class="px-1.5 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 text-[10px] font-bold border border-amber-200 flex items-center gap-0.5 cursor-pointer active:scale-95" title="Lưu thẻ từ vựng">
+                              <i class="fa-solid fa-star text-amber-500 text-[9px]"></i>
+                              <span>Lưu</span>
+                            </button>
+                          </div>
+                        </div>
+                        <p class="text-slate-800 text-xs font-semibold"><span class="text-slate-400 font-normal">Nghĩa:</span> ${this.escapeHtml(chk.meaning || '')}</p>
+                        ${chk.simpleEnglish ? `
+                          <p class="text-slate-500 text-[10px] italic leading-tight">💡 ${this.escapeHtml(chk.simpleEnglish)}</p>
+                        ` : ''}
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Bottom: Tap to Flip Back Footer Hint -->
+            <div class="pt-2 border-t border-blue-100 flex items-center justify-between text-[11px] text-blue-700 font-medium">
+              <span class="flex items-center gap-1.5 text-slate-500 text-[10px] sm:text-[11px]">
+                <i class="fa-solid fa-hand-pointer text-blue-600 text-[10px] animate-bounce"></i>
+                <span>Chạm vào thẻ để lật lại câu tiếng Anh</span>
+              </span>
+              <span class="flex items-center gap-1 text-blue-700 font-bold hover:text-blue-900 text-[11px]">
+                <span>Mặt trước (EN)</span>
+                <i class="fa-solid fa-arrow-rotate-left text-[10px]"></i>
+              </span>
+            </div>
+
           </div>
 
         </div>
       `;
 
-      resultsList.appendChild(card);
+      resultsList.appendChild(scene);
     });
   }
 
   /**
-   * Toggle Face on a specific Vach La Sentence Card (front vs back)
+   * Toggle 3D Flip on a specific Vach La Sentence Card
    */
-  setVachLaSentenceFace(sIdx, face) {
-    const front = document.getElementById(`sentenceFaceFront_${sIdx}`);
-    const back = document.getElementById(`sentenceFaceBack_${sIdx}`);
-    const btnFront = document.getElementById(`btnSentenceFaceFront_${sIdx}`);
-    const btnBack = document.getElementById(`btnSentenceFaceBack_${sIdx}`);
-
-    if (face === 'back') {
-      if (front) front.classList.add('hidden');
-      if (back) back.classList.remove('hidden');
-      if (btnFront) btnFront.className = 'flex-1 py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-slate-900 font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer text-xs';
-      if (btnBack) btnBack.className = 'flex-1 py-1.5 px-2.5 rounded-lg bg-white text-blue-700 font-bold shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer text-xs';
-    } else {
-      if (front) front.classList.remove('hidden');
-      if (back) back.classList.add('hidden');
-      if (btnFront) btnFront.className = 'flex-1 py-1.5 px-2.5 rounded-lg bg-white text-blue-700 font-bold shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer text-xs';
-      if (btnBack) btnBack.className = 'flex-1 py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-slate-900 font-semibold transition flex items-center justify-center gap-1.5 cursor-pointer text-xs';
-    }
-  }
-
-  /**
-   * Toggle 3D flip on a specific Vach La chunk card
-   */
-  toggleVachLaCardFlip(cardId) {
-    const card = document.getElementById(cardId);
+  toggleVachLaSentenceFlip(sIdx) {
+    const card = document.getElementById(`vachLaSentenceCard_${sIdx}`);
     if (card) {
       card.classList.toggle('is-flipped');
     }
   }
 
   /**
-   * Master Toggle: Expand All / Collapse All Vach La Chunks & Sentence Faces
+   * Master Toggle: Flip All Sentence Cards to Back or Front
    */
-  toggleAllVachLaChunks(shouldOpen) {
-    const sentences = document.querySelectorAll('[id^="sentenceFaceBack_"]');
-    sentences.forEach((cont, sIdx) => {
-      this.setVachLaSentenceFace(sIdx, shouldOpen ? 'back' : 'front');
+  toggleAllVachLaSentences(flipToBack) {
+    const cards = document.querySelectorAll('[id^="vachLaSentenceCard_"]');
+    cards.forEach(card => {
+      if (flipToBack) {
+        card.classList.add('is-flipped');
+      } else {
+        card.classList.remove('is-flipped');
+      }
     });
-    this.showToast(shouldOpen ? 'Đã mở tất cả bản dịch & cụm từ!' : 'Đã thu về mặt câu tiếng Anh!', 'info');
+    this.showToast(flipToBack ? 'Đã lật tất cả sang Mặt 2 (Bản dịch & Cụm từ)!' : 'Đã lật tất cả về Mặt 1 (Câu Tiếng Anh)!', 'info');
   }
 
   /**
