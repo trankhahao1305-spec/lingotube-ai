@@ -2729,43 +2729,43 @@ Return ONLY a valid JSON object with the following schema:
           <!-- MẶT 1 (FRONT): CÂU TIẾNG ANH & FULL IPA -->
           <div class="vachla-sentence-face vachla-sentence-front bg-white border border-slate-200 group-hover:border-blue-300 p-3.5 sm:p-4 flex flex-col justify-between shadow-2xs">
             
-            <!-- Top Fixed Control Bar -->
-            <div class="flex items-center justify-between pb-2.5 border-b border-slate-100 gap-2">
+            <!-- Top Control Bar (Icon-only buttons) -->
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100 gap-2">
               <div class="flex items-center gap-2">
                 <span class="font-bold font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-[11px] border border-slate-200">#${sIdx + 1}</span>
-                <span class="font-mono text-[11px] text-blue-600 font-bold hover:underline cursor-pointer" onclick="event.stopPropagation(); app.seekTo(${startTime})">
-                  <i class="fa-regular fa-clock text-[10px]"></i> ${this.formatSeconds(startTime, true)} - ${this.formatSeconds(endTime, true)}
+                <span class="font-mono text-[11px] text-blue-600 font-bold hover:underline cursor-pointer flex items-center gap-1" onclick="event.stopPropagation(); app.seekTo(${startTime})">
+                  <i class="fa-regular fa-clock text-[10px]"></i>
+                  <span>${this.formatSeconds(startTime, true)} - ${this.formatSeconds(endTime, true)}</span>
                 </span>
               </div>
 
-              <div class="flex items-center gap-1 sm:gap-1.5">
-                <button onclick="event.stopPropagation(); app.seekTo(${startTime})" title="Xem video tại câu này" class="px-2 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-[11px] flex items-center gap-1 font-medium border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
+              <!-- Pure Icon Action Buttons -->
+              <div class="flex items-center gap-1">
+                <button onclick="event.stopPropagation(); app.seekTo(${startTime})" title="Xem video tại câu này" class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
                   <i class="fa-solid fa-play text-blue-600 text-[10px]"></i>
-                  <span class="hidden sm:inline">Xem video</span>
                 </button>
-                <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(englishText)}')" title="Nghe phát âm bản xứ" class="px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] flex items-center gap-1 font-medium border border-blue-200 shadow-2xs cursor-pointer active:scale-95">
-                  <i class="fa-solid fa-volume-high text-blue-600 text-[10px]"></i>
-                  <span>Phát âm</span>
+                <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(englishText)}')" title="Phát âm" class="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center border border-blue-200 shadow-2xs cursor-pointer active:scale-95">
+                  <i class="fa-solid fa-volume-high text-blue-600 text-[11px]"></i>
                 </button>
-                <button onclick="event.stopPropagation(); app.copyText('${this.escapeQuotes(englishText)}')" title="Sao chép câu" class="p-1 px-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 text-xs border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
+                <button onclick="event.stopPropagation(); app.copyText('${this.escapeQuotes(englishText)}')" title="Sao chép câu" class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
                   <i class="fa-regular fa-copy text-[11px]"></i>
                 </button>
-                <button onclick="event.stopPropagation(); app.deleteVachLaSentence(${sIdx})" title="Xóa câu này" class="p-1 px-1.5 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 text-xs border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
+                <button onclick="event.stopPropagation(); app.deleteVachLaSentence(${sIdx})" title="Xóa câu này" class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
                   <i class="fa-regular fa-trash-can text-[11px]"></i>
                 </button>
               </div>
             </div>
 
             <!-- English Sentence Body -->
-            <div class="my-3 space-y-2">
+            <div class="my-2 space-y-2">
               <p class="text-base sm:text-lg text-slate-900 font-bold leading-relaxed font-heading break-words select-text">${highlightedHtml}</p>
               
-              <!-- Full Multi-line IPA without truncation -->
+              <!-- Full Multi-line IPA without redundant "IPA:" text -->
               ${ipaText ? `
                 <div class="flex items-start justify-between bg-indigo-50/60 px-3 py-2 rounded-xl border border-indigo-100 text-xs font-mono text-indigo-900 gap-2">
                   <div class="flex items-start gap-1.5 flex-1 min-w-0">
-                    <span class="text-indigo-500 text-[10px] uppercase font-sans font-bold shrink-0 mt-0.5">🗣️ IPA:</span>
-                    <span class="tracking-wide select-all font-semibold break-words whitespace-normal leading-relaxed text-[11px] sm:text-xs">${this.escapeHtml(ipaText)}</span>
+                    <span class="text-indigo-500 shrink-0 mt-0.5 text-xs">🗣️</span>
+                    <span class="tracking-wide select-all font-semibold break-words whitespace-normal leading-relaxed text-[11px] sm:text-xs">/${this.escapeHtml(ipaText.replace(/^\/|\/$/g, ''))}/</span>
                   </div>
                   <button onclick="event.stopPropagation(); app.copyText('${this.escapeQuotes(ipaText)}')" class="text-indigo-400 hover:text-indigo-700 text-xs p-0.5 shrink-0 cursor-pointer active:scale-95" title="Copy IPA">
                     <i class="fa-regular fa-copy text-[10px]"></i>
@@ -2774,100 +2774,71 @@ Return ONLY a valid JSON object with the following schema:
               ` : ''}
             </div>
 
-            <!-- Bottom: Tap to Flip Footer Hint -->
-            <div class="pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-blue-600 font-medium">
-              <span class="flex items-center gap-1.5 text-slate-400 text-[10px] sm:text-[11px]">
-                <i class="fa-solid fa-hand-pointer text-blue-500 text-[10px] animate-bounce"></i>
-                <span>Chạm vào thẻ để lật xem bản dịch</span>
-              </span>
-              <span class="flex items-center gap-1 text-blue-600 font-bold hover:text-blue-800 text-[11px]">
-                <span>Bản dịch & Cụm từ (${chunks.length})</span>
-                <i class="fa-solid fa-arrow-rotate-right text-[10px]"></i>
-              </span>
-            </div>
-
           </div>
 
           <!-- MẶT 2 (BACK): BẢN DỊCH & CỤM TỪ THEN CHỐT -->
           <div class="vachla-sentence-face vachla-sentence-back bg-gradient-to-b from-blue-50/70 via-white to-slate-50 border-2 border-blue-300 p-3.5 sm:p-4 flex flex-col justify-between shadow-sm">
             
-            <!-- Top Bar -->
+            <!-- Top Control Bar (Icon-only buttons) -->
             <div class="flex items-center justify-between pb-2 border-b border-blue-100 gap-2">
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1.5">
                 <span class="font-bold font-mono px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[11px] border border-blue-200">#${sIdx + 1}</span>
-                <span class="text-[10px] font-extrabold uppercase tracking-wider text-blue-800 font-mono flex items-center gap-1">
-                  <i class="fa-solid fa-circle-check text-emerald-600 text-xs"></i>
-                  <span>Bản Dịch & Bóc Tách Cụm Từ</span>
+                <span class="text-[11px] font-bold text-blue-800 font-mono flex items-center gap-1">
+                  <span>🇻🇳 Nghĩa & Cụm từ</span>
                 </span>
               </div>
               <div class="flex items-center gap-1">
-                <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(englishText)}')" title="Phát âm tiếng Anh" class="p-1 px-2 rounded-lg bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 text-xs shadow-2xs cursor-pointer active:scale-95">
-                  <i class="fa-solid fa-volume-high text-[10px]"></i>
-                </button>
-                <button onclick="event.stopPropagation(); app.seekTo(${startTime})" title="Xem video" class="p-1 px-2 rounded-lg bg-white hover:bg-blue-50 text-slate-600 border border-slate-200 text-xs shadow-2xs cursor-pointer active:scale-95">
+                <button onclick="event.stopPropagation(); app.seekTo(${startTime})" title="Xem video" class="w-7 h-7 rounded-lg bg-white hover:bg-blue-50 text-slate-600 flex items-center justify-center border border-slate-200 text-xs shadow-2xs cursor-pointer active:scale-95">
                   <i class="fa-solid fa-play text-blue-600 text-[10px]"></i>
+                </button>
+                <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(englishText)}')" title="Phát âm" class="w-7 h-7 rounded-lg bg-white hover:bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200 text-xs shadow-2xs cursor-pointer active:scale-95">
+                  <i class="fa-solid fa-volume-high text-[11px]"></i>
+                </button>
+                <button onclick="event.stopPropagation(); app.deleteVachLaSentence(${sIdx})" title="Xóa câu" class="w-7 h-7 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
+                  <i class="fa-regular fa-trash-can text-[11px]"></i>
                 </button>
               </div>
             </div>
 
             <!-- Center: Vietnamese Translation & Chunks -->
-            <div class="my-2 space-y-2.5">
-              <div class="bg-white/90 p-2.5 rounded-xl border border-blue-200/70 shadow-2xs space-y-0.5">
-                <span class="text-[10px] text-blue-700 font-bold uppercase tracking-wider font-mono">Bản Dịch Tiếng Việt:</span>
+            <div class="my-2 space-y-2">
+              <!-- Direct Vietnamese Translation -->
+              <div class="bg-white/90 p-2.5 rounded-xl border border-blue-200/70 shadow-2xs">
                 <p class="text-slate-900 font-bold text-sm sm:text-base leading-relaxed break-words">${this.escapeHtml(vietnameseText)}</p>
               </div>
 
-              <!-- Chunks list -->
+              <!-- Chunks list (Clean, direct meaning, icon-only actions) -->
               ${chunks.length > 0 ? `
                 <div class="space-y-1.5">
-                  <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-700 flex items-center gap-1">
-                    <i class="fa-solid fa-cubes text-blue-600 text-[10px]"></i>
-                    <span>${chunks.length} Cụm từ then chốt:</span>
-                  </span>
-                  <div class="space-y-1.5 max-h-48 overflow-y-auto pr-0.5">
-                    ${chunks.map((chk, cIdx) => `
-                      <div class="p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-300 shadow-2xs space-y-1 transition text-xs">
-                        <div class="flex items-center justify-between gap-1">
-                          <div class="flex items-center gap-1.5 flex-wrap">
-                            <span class="font-extrabold text-slate-900 text-xs">${this.escapeHtml(chk.phrase || '')}</span>
-                            <span class="text-indigo-700 font-mono text-[10px] bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100 font-semibold">/${this.escapeHtml((chk.ipa || '').replace(/^\/|\/$/g, ''))}/</span>
-                            <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-mono">${this.escapeHtml(chk.grammar || 'Collocation')}</span>
-                          </div>
-                          <div class="flex items-center gap-1 shrink-0">
-                            <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(chk.phrase || '')}')" class="w-6 h-6 rounded bg-slate-50 hover:bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] border border-slate-200 cursor-pointer active:scale-95" title="Phát âm">
-                              <i class="fa-solid fa-volume-high"></i>
-                            </button>
-                            <button onclick="event.stopPropagation(); app.openYouGlish('${this.escapeQuotes(chk.phrase || '')}')" class="px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold border border-blue-200 flex items-center gap-0.5 cursor-pointer active:scale-95" title="Xem trên YouGlish">
-                              <i class="fa-solid fa-earth-americas text-[9px]"></i>
-                              <span>YG</span>
-                            </button>
-                            <button onclick="event.stopPropagation(); app.saveVocabCard('${this.escapeQuotes(chk.phrase || '')}', '${this.escapeQuotes(chk.meaning || '')}', '${this.escapeQuotes(chk.ipa || '')}', '${this.escapeQuotes(chk.simpleEnglish || '')}', '${this.escapeQuotes(englishText)}', '${this.escapeQuotes(chk.grammar || '')}')" class="px-1.5 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 text-[10px] font-bold border border-amber-200 flex items-center gap-0.5 cursor-pointer active:scale-95" title="Lưu thẻ từ vựng">
-                              <i class="fa-solid fa-star text-amber-500 text-[9px]"></i>
-                              <span>Lưu</span>
-                            </button>
-                          </div>
+                  ${chunks.map((chk, cIdx) => `
+                    <div class="p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-300 shadow-2xs space-y-1 transition text-xs">
+                      <div class="flex items-center justify-between gap-1">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <span class="font-extrabold text-slate-900 text-xs sm:text-sm">${this.escapeHtml(chk.phrase || '')}</span>
+                          <span class="text-indigo-700 font-mono text-[10px] bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100 font-semibold">/${this.escapeHtml((chk.ipa || '').replace(/^\/|\/$/g, ''))}/</span>
+                          <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-mono font-medium">${this.escapeHtml(chk.grammar || 'Phrase')}</span>
                         </div>
-                        <p class="text-slate-800 text-xs font-semibold"><span class="text-slate-400 font-normal">Nghĩa:</span> ${this.escapeHtml(chk.meaning || '')}</p>
-                        ${chk.simpleEnglish ? `
-                          <p class="text-slate-500 text-[10px] italic leading-tight">💡 ${this.escapeHtml(chk.simpleEnglish)}</p>
-                        ` : ''}
+                        <div class="flex items-center gap-1 shrink-0">
+                          <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(chk.phrase || '')}')" class="w-6 h-6 rounded-lg bg-slate-50 hover:bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] border border-slate-200 cursor-pointer active:scale-95" title="Phát âm">
+                            <i class="fa-solid fa-volume-high"></i>
+                          </button>
+                          <button onclick="event.stopPropagation(); app.openYouGlish('${this.escapeQuotes(chk.phrase || '')}')" class="px-1.5 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold border border-blue-200 flex items-center gap-0.5 cursor-pointer active:scale-95" title="Xem trên YouGlish">
+                            <i class="fa-solid fa-earth-americas text-[9px]"></i>
+                            <span>YG</span>
+                          </button>
+                          <button onclick="event.stopPropagation(); app.saveVocabCard('${this.escapeQuotes(chk.phrase || '')}', '${this.escapeQuotes(chk.meaning || '')}', '${this.escapeQuotes(chk.ipa || '')}', '${this.escapeQuotes(chk.simpleEnglish || '')}', '${this.escapeQuotes(englishText)}', '${this.escapeQuotes(chk.grammar || '')}')" class="w-6 h-6 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 flex items-center justify-center text-[10px] border border-amber-200 cursor-pointer active:scale-95" title="Lưu thẻ từ vựng">
+                            <i class="fa-solid fa-star"></i>
+                          </button>
+                        </div>
                       </div>
-                    `).join('')}
-                  </div>
+                      <p class="text-slate-800 text-xs font-bold leading-snug">${this.escapeHtml(chk.meaning || '')}</p>
+                      ${chk.simpleEnglish ? `
+                        <p class="text-slate-500 text-[10px] italic leading-tight">💡 ${this.escapeHtml(chk.simpleEnglish)}</p>
+                      ` : ''}
+                    </div>
+                  `).join('')}
                 </div>
               ` : ''}
-            </div>
-
-            <!-- Bottom: Tap to Flip Back Footer Hint -->
-            <div class="pt-2 border-t border-blue-100 flex items-center justify-between text-[11px] text-blue-700 font-medium">
-              <span class="flex items-center gap-1.5 text-slate-500 text-[10px] sm:text-[11px]">
-                <i class="fa-solid fa-hand-pointer text-blue-600 text-[10px] animate-bounce"></i>
-                <span>Chạm vào thẻ để lật lại câu tiếng Anh</span>
-              </span>
-              <span class="flex items-center gap-1 text-blue-700 font-bold hover:text-blue-900 text-[11px]">
-                <span>Mặt trước (EN)</span>
-                <i class="fa-solid fa-arrow-rotate-left text-[10px]"></i>
-              </span>
             </div>
 
           </div>
