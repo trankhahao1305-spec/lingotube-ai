@@ -2727,7 +2727,7 @@ Return ONLY a valid JSON object with the following schema:
         <div id="vachLaSentenceCard_${sIdx}" onclick="app.toggleVachLaSentenceFlip(${sIdx})" class="vachla-sentence-card shadow-sm hover:shadow-md transition-all group">
           
           <!-- MẶT 1 (FRONT): CÂU TIẾNG ANH & FULL IPA -->
-          <div class="vachla-sentence-face vachla-sentence-front bg-white border border-slate-200 group-hover:border-blue-300 p-3.5 sm:p-4 flex flex-col justify-between shadow-2xs">
+          <div class="vachla-sentence-face vachla-sentence-front bg-white border border-slate-200 group-hover:border-blue-300 p-3.5 sm:p-4 flex flex-col gap-2.5 shadow-2xs">
             
             <!-- Top Control Bar (Icon-only buttons) -->
             <div class="flex items-center justify-between pb-2 border-b border-slate-100 gap-2">
@@ -2757,7 +2757,7 @@ Return ONLY a valid JSON object with the following schema:
             </div>
 
             <!-- English Sentence Body -->
-            <div class="my-2 space-y-2">
+            <div class="my-1 space-y-2">
               <p class="text-base sm:text-lg text-slate-900 font-bold leading-relaxed font-heading break-words select-text">${highlightedHtml}</p>
               
               <!-- Full Multi-line IPA without redundant "IPA:" text -->
@@ -2776,8 +2776,8 @@ Return ONLY a valid JSON object with the following schema:
 
           </div>
 
-          <!-- MẶT 2 (BACK): BẢN DỊCH & CỤM TỪ THEN CHỐT -->
-          <div class="vachla-sentence-face vachla-sentence-back bg-gradient-to-b from-blue-50/70 via-white to-slate-50 border-2 border-blue-300 p-3.5 sm:p-4 flex flex-col justify-between shadow-sm">
+          <!-- MẶT 2 (BACK): BẢN DỊCH & DROPDOWN CỤM TỪ -->
+          <div class="vachla-sentence-face vachla-sentence-back bg-gradient-to-b from-blue-50/70 via-white to-slate-50 border-2 border-blue-300 p-3.5 sm:p-4 flex flex-col gap-2.5 shadow-sm">
             
             <!-- Top Control Bar (Icon-only buttons) -->
             <div class="flex items-center justify-between pb-2 border-b border-blue-100 gap-2">
@@ -2800,43 +2800,60 @@ Return ONLY a valid JSON object with the following schema:
               </div>
             </div>
 
-            <!-- Center: Vietnamese Translation & Chunks -->
-            <div class="my-2 space-y-2">
+            <!-- Center: Vietnamese Translation & Dropdown Chunks -->
+            <div class="my-1 space-y-2">
               <!-- Direct Vietnamese Translation -->
               <div class="bg-white/90 p-2.5 rounded-xl border border-blue-200/70 shadow-2xs">
                 <p class="text-slate-900 font-bold text-sm sm:text-base leading-relaxed break-words">${this.escapeHtml(vietnameseText)}</p>
               </div>
 
-              <!-- Chunks list (Clean, direct meaning, icon-only actions) -->
+              <!-- Dropdown Bar for Chunks -->
               ${chunks.length > 0 ? `
-                <div class="space-y-1.5">
-                  ${chunks.map((chk, cIdx) => `
-                    <div class="p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-300 shadow-2xs space-y-1 transition text-xs">
-                      <div class="flex items-center justify-between gap-1">
-                        <div class="flex items-center gap-1.5 flex-wrap">
-                          <span class="font-extrabold text-slate-900 text-xs sm:text-sm">${this.escapeHtml(chk.phrase || '')}</span>
-                          <span class="text-indigo-700 font-mono text-[10px] bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100 font-semibold">/${this.escapeHtml((chk.ipa || '').replace(/^\/|\/$/g, ''))}/</span>
-                          <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-mono font-medium">${this.escapeHtml(chk.grammar || 'Phrase')}</span>
-                        </div>
-                        <div class="flex items-center gap-1 shrink-0">
-                          <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(chk.phrase || '')}')" class="w-6 h-6 rounded-lg bg-slate-50 hover:bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] border border-slate-200 cursor-pointer active:scale-95" title="Phát âm">
-                            <i class="fa-solid fa-volume-high"></i>
-                          </button>
-                          <button onclick="event.stopPropagation(); app.openYouGlish('${this.escapeQuotes(chk.phrase || '')}')" class="px-1.5 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold border border-blue-200 flex items-center gap-0.5 cursor-pointer active:scale-95" title="Xem trên YouGlish">
-                            <i class="fa-solid fa-earth-americas text-[9px]"></i>
-                            <span>YG</span>
-                          </button>
-                          <button onclick="event.stopPropagation(); app.saveVocabCard('${this.escapeQuotes(chk.phrase || '')}', '${this.escapeQuotes(chk.meaning || '')}', '${this.escapeQuotes(chk.ipa || '')}', '${this.escapeQuotes(chk.simpleEnglish || '')}', '${this.escapeQuotes(englishText)}', '${this.escapeQuotes(chk.grammar || '')}')" class="w-6 h-6 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 flex items-center justify-center text-[10px] border border-amber-200 cursor-pointer active:scale-95" title="Lưu thẻ từ vựng">
-                            <i class="fa-solid fa-star"></i>
-                          </button>
-                        </div>
-                      </div>
-                      <p class="text-slate-800 text-xs font-bold leading-snug">${this.escapeHtml(chk.meaning || '')}</p>
-                      ${chk.simpleEnglish ? `
-                        <p class="text-slate-500 text-[10px] italic leading-tight">💡 ${this.escapeHtml(chk.simpleEnglish)}</p>
-                      ` : ''}
+                <div class="space-y-1.5 pt-0.5">
+                  <button 
+                    type="button"
+                    id="btnChunkDropdown_${sIdx}"
+                    onclick="event.stopPropagation(); app.toggleVachLaChunkDropdown(${sIdx})" 
+                    class="w-full py-2 px-3 rounded-xl bg-blue-50/90 hover:bg-blue-100 border border-blue-200 text-blue-900 text-xs font-semibold flex items-center justify-between transition active:scale-98 cursor-pointer shadow-2xs"
+                  >
+                    <div class="flex items-center gap-1.5 truncate">
+                      <i class="fa-solid fa-layer-group text-blue-600 text-xs shrink-0"></i>
+                      <span class="font-bold text-blue-800">${chunks.length} Cụm từ:</span>
+                      <span class="text-slate-600 font-normal truncate text-[11px]">${chunks.map(c => this.escapeHtml(c.phrase || '')).join(', ')}</span>
                     </div>
-                  `).join('')}
+                    <i id="iconChunkDropdown_${sIdx}" class="fa-solid fa-chevron-down text-blue-600 text-[10px] shrink-0 transition-transform duration-200 ml-2"></i>
+                  </button>
+
+                  <!-- Collapsible Chunks List (Hidden by default, drops down on click) -->
+                  <div id="chunksDropdown_${sIdx}" class="hidden space-y-2 pt-1">
+                    ${chunks.map((chk, cIdx) => `
+                      <div class="p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-300 shadow-2xs space-y-1 transition text-xs">
+                        <div class="flex items-center justify-between gap-1">
+                          <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="font-extrabold text-slate-900 text-xs sm:text-sm">${this.escapeHtml(chk.phrase || '')}</span>
+                            <span class="text-indigo-700 font-mono text-[10px] bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100 font-semibold">/${this.escapeHtml((chk.ipa || '').replace(/^\/|\/$/g, ''))}/</span>
+                            <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-mono font-medium">${this.escapeHtml(chk.grammar || 'Phrase')}</span>
+                          </div>
+                          <div class="flex items-center gap-1 shrink-0">
+                            <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(chk.phrase || '')}')" class="w-6 h-6 rounded-lg bg-slate-50 hover:bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] border border-slate-200 cursor-pointer active:scale-95" title="Phát âm">
+                              <i class="fa-solid fa-volume-high"></i>
+                            </button>
+                            <button onclick="event.stopPropagation(); app.openYouGlish('${this.escapeQuotes(chk.phrase || '')}')" class="px-1.5 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold border border-blue-200 flex items-center gap-0.5 cursor-pointer active:scale-95" title="Xem trên YouGlish">
+                              <i class="fa-solid fa-earth-americas text-[9px]"></i>
+                              <span>YG</span>
+                            </button>
+                            <button onclick="event.stopPropagation(); app.saveVocabCard('${this.escapeQuotes(chk.phrase || '')}', '${this.escapeQuotes(chk.meaning || '')}', '${this.escapeQuotes(chk.ipa || '')}', '${this.escapeQuotes(chk.simpleEnglish || '')}', '${this.escapeQuotes(englishText)}', '${this.escapeQuotes(chk.grammar || '')}')" class="w-6 h-6 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 flex items-center justify-center text-[10px] border border-amber-200 cursor-pointer active:scale-95" title="Lưu thẻ từ vựng">
+                              <i class="fa-solid fa-star"></i>
+                            </button>
+                          </div>
+                        </div>
+                        <p class="text-slate-800 text-xs font-bold leading-snug">${this.escapeHtml(chk.meaning || '')}</p>
+                        ${chk.simpleEnglish ? `
+                          <p class="text-slate-500 text-[10px] italic leading-tight">💡 ${this.escapeHtml(chk.simpleEnglish)}</p>
+                        ` : ''}
+                      </div>
+                    `).join('')}
+                  </div>
                 </div>
               ` : ''}
             </div>
@@ -2848,6 +2865,24 @@ Return ONLY a valid JSON object with the following schema:
 
       resultsList.appendChild(scene);
     });
+  }
+
+  /**
+   * Toggle Dropdown for chunks list on Back Face
+   */
+  toggleVachLaChunkDropdown(sIdx) {
+    const list = document.getElementById(`chunksDropdown_${sIdx}`);
+    const icon = document.getElementById(`iconChunkDropdown_${sIdx}`);
+    if (list) {
+      const isHidden = list.classList.contains('hidden');
+      if (isHidden) {
+        list.classList.remove('hidden');
+        if (icon) icon.className = 'fa-solid fa-chevron-up text-blue-600 text-[10px] shrink-0 transition-transform duration-200 ml-2';
+      } else {
+        list.classList.add('hidden');
+        if (icon) icon.className = 'fa-solid fa-chevron-down text-blue-600 text-[10px] shrink-0 transition-transform duration-200 ml-2';
+      }
+    }
   }
 
   /**
