@@ -2656,7 +2656,7 @@ Return ONLY a valid JSON object with the following schema:
   }
 
   /**
-   * Phase 3: Render Analyzed Sentences, Chunks, and IPA
+   * Phase 2: Render Interactive Bilingual Context Feed (Option 3)
    */
   renderVachLaAnalysis(data) {
     const emptyState = document.getElementById('vachLaEmptyState');
@@ -2681,31 +2681,32 @@ Return ONLY a valid JSON object with the following schema:
       return;
     }
 
-    // Top Summary Banner showing active cut clip range + Expand/Collapse Master Controls
+    // Store active analysis data for fast lookup in modals
+    this.currentVachLaSentences = sentences;
+
+    // Top Summary Banner
     const clipBanner = document.createElement('div');
-    clipBanner.className = 'p-3 rounded-xl bg-blue-50/70 border border-blue-200 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-800';
+    clipBanner.className = 'p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-blue-50/90 to-indigo-50/90 border border-blue-200 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-800 shadow-2xs';
     clipBanner.innerHTML = `
       <div class="flex items-center gap-2">
-        <i class="fa-solid fa-scissors text-blue-600"></i>
-        <span>Đoạn clip đang phân tích: <strong class="text-blue-700 font-mono font-bold">${this.formatSeconds(this.clipRange.start, true)} → ${this.formatSeconds(this.clipRange.end, true)}</strong></span>
+        <div class="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs shadow-2xs">
+          <i class="fa-solid fa-scissors text-[10px]"></i>
+        </div>
+        <span class="font-medium">Đoạn clip: <strong class="text-blue-700 font-mono font-bold">${this.formatSeconds(this.clipRange.start, true)} → ${this.formatSeconds(this.clipRange.end, true)}</strong></span>
       </div>
       <div class="flex items-center gap-2">
-        <span class="px-2 py-0.5 rounded-full bg-white text-slate-700 font-mono text-[11px] border border-blue-200 font-bold shadow-2xs">${sentences.length} câu</span>
-        <button onclick="app.toggleAllVachLaSentences(true)" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-blue-700 font-semibold border border-blue-200 text-[11px] shadow-2xs transition flex items-center gap-1 cursor-pointer" title="Lật tất cả sang Mặt 2 (Bản dịch & Cụm từ)">
-          <i class="fa-solid fa-rotate text-blue-600 text-[10px]"></i>
-          <span>Lật xem tất cả</span>
-        </button>
-        <button onclick="app.toggleAllVachLaSentences(false)" class="px-2.5 py-1 rounded-lg bg-white hover:bg-slate-100 text-slate-600 font-semibold border border-slate-200 text-[11px] shadow-2xs transition flex items-center gap-1 cursor-pointer" title="Lật tất cả về Mặt 1 (Tiếng Anh)">
-          <i class="fa-solid fa-rotate-left text-slate-400 text-[10px]"></i>
-          <span>Về mặt trước</span>
+        <span class="px-2.5 py-0.5 rounded-full bg-white text-blue-800 font-mono text-[11px] border border-blue-200 font-bold shadow-2xs">${sentences.length} câu phân tích</span>
+        <button onclick="app.openCustomWordsModal()" class="px-2.5 py-1 rounded-lg bg-white hover:bg-amber-50 text-amber-800 font-semibold border border-amber-300 text-[11px] shadow-2xs transition flex items-center gap-1 cursor-pointer" title="Tra thêm từ hoặc cụm mới">
+          <i class="fa-solid fa-plus-circle text-amber-600 text-[10px]"></i>
+          <span>Thêm từ</span>
         </button>
       </div>
     `;
     resultsList.appendChild(clipBanner);
 
     sentences.forEach((item, sIdx) => {
-      const scene = document.createElement('div');
-      scene.className = 'vachla-sentence-scene';
+      const card = document.createElement('div');
+      card.className = 'vachla-feed-card p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3 transition-all hover:border-blue-300 hover:shadow-md';
 
       const englishText = item.english || '';
       const vietnameseText = item.vietnamese || this.translateToVietnamese(englishText);
@@ -2714,200 +2715,182 @@ Return ONLY a valid JSON object with the following schema:
       const startTime = item.startTime !== undefined ? item.startTime : (this.clipRange.start);
       const endTime = item.endTime !== undefined ? item.endTime : (this.clipRange.end);
 
-      // Highlight chunks inside English sentence with click-to-flip
+      // Create interactive clickable chunks in English text
       let highlightedHtml = this.escapeHtml(englishText);
-      chunks.forEach((chk) => {
+      chunks.forEach((chk, cIdx) => {
         if (chk.phrase && chk.phrase.trim()) {
           const phraseRegex = new RegExp(`(${this.escapeRegex(chk.phrase)})`, 'gi');
-          highlightedHtml = highlightedHtml.replace(phraseRegex, `<mark class="bg-blue-100 text-blue-950 border-b-2 border-blue-500 px-1 rounded font-bold hover:bg-blue-200 transition" title="Cụm từ: ${this.escapeHtml(chk.meaning || '')}">$1</mark>`);
+          highlightedHtml = highlightedHtml.replace(
+            phraseRegex, 
+            `<span onclick="app.showChunkPopup(${sIdx}, ${cIdx})" class="vachla-chunk-badge" title="Chạm để xem nghĩa & YouGlish">$1</span>`
+          );
         }
       });
 
-      scene.innerHTML = `
-        <div id="vachLaSentenceCard_${sIdx}" onclick="app.toggleVachLaSentenceFlip(${sIdx})" class="vachla-sentence-card shadow-sm hover:shadow-md transition-all group">
-          
-          <!-- MẶT 1 (FRONT): CÂU TIẾNG ANH & FULL IPA -->
-          <div class="vachla-sentence-face vachla-sentence-front bg-white border border-slate-200 group-hover:border-blue-300 p-3.5 sm:p-4 flex flex-col gap-2.5 shadow-2xs">
-            
-            <!-- Top Control Bar (Icon-only buttons) -->
-            <div class="flex items-center justify-between pb-2 border-b border-slate-100 gap-2">
-              <div class="flex items-center gap-2">
-                <span class="font-bold font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-[11px] border border-slate-200">#${sIdx + 1}</span>
-                <span class="font-mono text-[11px] text-blue-600 font-bold hover:underline cursor-pointer flex items-center gap-1" onclick="event.stopPropagation(); app.seekTo(${startTime})">
-                  <i class="fa-regular fa-clock text-[10px]"></i>
-                  <span>${this.formatSeconds(startTime, true)} - ${this.formatSeconds(endTime, true)}</span>
-                </span>
-              </div>
-
-              <!-- Pure Icon Action Buttons -->
-              <div class="flex items-center gap-1">
-                <button onclick="event.stopPropagation(); app.seekTo(${startTime})" title="Xem video tại câu này" class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
-                  <i class="fa-solid fa-play text-blue-600 text-[10px]"></i>
-                </button>
-                <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(englishText)}')" title="Phát âm" class="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center border border-blue-200 shadow-2xs cursor-pointer active:scale-95">
-                  <i class="fa-solid fa-volume-high text-blue-600 text-[11px]"></i>
-                </button>
-                <button onclick="event.stopPropagation(); app.copyText('${this.escapeQuotes(englishText)}')" title="Sao chép câu" class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
-                  <i class="fa-regular fa-copy text-[11px]"></i>
-                </button>
-                <button onclick="event.stopPropagation(); app.deleteVachLaSentence(${sIdx})" title="Xóa câu này" class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
-                  <i class="fa-regular fa-trash-can text-[11px]"></i>
-                </button>
-              </div>
-            </div>
-
-            <!-- English Sentence Body -->
-            <div class="my-1 space-y-2">
-              <p class="text-base sm:text-lg text-slate-900 font-bold leading-relaxed font-heading break-words select-text">${highlightedHtml}</p>
-              
-              <!-- Full Multi-line IPA without redundant "IPA:" text -->
-              ${ipaText ? `
-                <div class="flex items-start justify-between bg-indigo-50/60 px-3 py-2 rounded-xl border border-indigo-100 text-xs font-mono text-indigo-900 gap-2">
-                  <div class="flex items-start gap-1.5 flex-1 min-w-0">
-                    <span class="text-indigo-500 shrink-0 mt-0.5 text-xs">🗣️</span>
-                    <span class="tracking-wide select-all font-semibold break-words whitespace-normal leading-relaxed text-[11px] sm:text-xs">/${this.escapeHtml(ipaText.replace(/^\/|\/$/g, ''))}/</span>
-                  </div>
-                  <button onclick="event.stopPropagation(); app.copyText('${this.escapeQuotes(ipaText)}')" class="text-indigo-400 hover:text-indigo-700 text-xs p-0.5 shrink-0 cursor-pointer active:scale-95" title="Copy IPA">
-                    <i class="fa-regular fa-copy text-[10px]"></i>
-                  </button>
-                </div>
-              ` : ''}
-            </div>
-
+      card.innerHTML = `
+        <!-- Card Header: #Index, Timestamp & Quick Actions -->
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 gap-2">
+          <div class="flex items-center gap-2">
+            <span class="font-bold font-mono px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 text-[11px] border border-blue-100 shadow-2xs">#${sIdx + 1}</span>
+            <button onclick="app.seekTo(${startTime}, true)" class="font-mono text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer active:scale-95 transition" title="Nghe câu này">
+              <i class="fa-regular fa-clock text-[10px]"></i>
+              <span>${this.formatSeconds(startTime, true)} - ${this.formatSeconds(endTime, true)}</span>
+            </button>
           </div>
 
-          <!-- MẶT 2 (BACK): BẢN DỊCH & DROPDOWN CỤM TỪ -->
-          <div class="vachla-sentence-face vachla-sentence-back bg-gradient-to-b from-blue-50/70 via-white to-slate-50 border-2 border-blue-300 p-3.5 sm:p-4 flex flex-col gap-2.5 shadow-sm">
-            
-            <!-- Top Control Bar (Icon-only buttons) -->
-            <div class="flex items-center justify-between pb-2 border-b border-blue-100 gap-2">
-              <div class="flex items-center gap-1.5">
-                <span class="font-bold font-mono px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[11px] border border-blue-200">#${sIdx + 1}</span>
-                <span class="text-[11px] font-bold text-blue-800 font-mono flex items-center gap-1">
-                  <span>🇻🇳 Nghĩa & Cụm từ</span>
-                </span>
-              </div>
-              <div class="flex items-center gap-1">
-                <button onclick="event.stopPropagation(); app.seekTo(${startTime})" title="Xem video" class="w-7 h-7 rounded-lg bg-white hover:bg-blue-50 text-slate-600 flex items-center justify-center border border-slate-200 text-xs shadow-2xs cursor-pointer active:scale-95">
-                  <i class="fa-solid fa-play text-blue-600 text-[10px]"></i>
-                </button>
-                <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(englishText)}')" title="Phát âm" class="w-7 h-7 rounded-lg bg-white hover:bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200 text-xs shadow-2xs cursor-pointer active:scale-95">
-                  <i class="fa-solid fa-volume-high text-[11px]"></i>
-                </button>
-                <button onclick="event.stopPropagation(); app.deleteVachLaSentence(${sIdx})" title="Xóa câu" class="w-7 h-7 rounded-lg bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer active:scale-95">
-                  <i class="fa-regular fa-trash-can text-[11px]"></i>
-                </button>
-              </div>
-            </div>
-
-            <!-- Center: Vietnamese Translation & Dropdown Chunks -->
-            <div class="my-1 space-y-2">
-              <!-- Direct Vietnamese Translation -->
-              <div class="bg-white/90 p-2.5 rounded-xl border border-blue-200/70 shadow-2xs">
-                <p class="text-slate-900 font-bold text-sm sm:text-base leading-relaxed break-words">${this.escapeHtml(vietnameseText)}</p>
-              </div>
-
-              <!-- Dropdown Bar for Chunks -->
-              ${chunks.length > 0 ? `
-                <div class="space-y-1.5 pt-0.5">
-                  <button 
-                    type="button"
-                    id="btnChunkDropdown_${sIdx}"
-                    onclick="event.stopPropagation(); app.toggleVachLaChunkDropdown(${sIdx})" 
-                    class="w-full py-2 px-3 rounded-xl bg-blue-50/90 hover:bg-blue-100 border border-blue-200 text-blue-900 text-xs font-semibold flex items-center justify-between transition active:scale-98 cursor-pointer shadow-2xs"
-                  >
-                    <div class="flex items-center gap-1.5 truncate">
-                      <i class="fa-solid fa-layer-group text-blue-600 text-xs shrink-0"></i>
-                      <span class="font-bold text-blue-800">${chunks.length} Cụm từ:</span>
-                      <span class="text-slate-600 font-normal truncate text-[11px]">${chunks.map(c => this.escapeHtml(c.phrase || '')).join(', ')}</span>
-                    </div>
-                    <i id="iconChunkDropdown_${sIdx}" class="fa-solid fa-chevron-down text-blue-600 text-[10px] shrink-0 transition-transform duration-200 ml-2"></i>
-                  </button>
-
-                  <!-- Collapsible Chunks List (Hidden by default, drops down on click) -->
-                  <div id="chunksDropdown_${sIdx}" class="hidden space-y-2 pt-1">
-                    ${chunks.map((chk, cIdx) => `
-                      <div class="p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-300 shadow-2xs space-y-1 transition text-xs">
-                        <div class="flex items-center justify-between gap-1">
-                          <div class="flex items-center gap-1.5 flex-wrap">
-                            <span class="font-extrabold text-slate-900 text-xs sm:text-sm">${this.escapeHtml(chk.phrase || '')}</span>
-                            <span class="text-indigo-700 font-mono text-[10px] bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100 font-semibold">/${this.escapeHtml((chk.ipa || '').replace(/^\/|\/$/g, ''))}/</span>
-                            <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 font-mono font-medium">${this.escapeHtml(chk.grammar || 'Phrase')}</span>
-                          </div>
-                          <div class="flex items-center gap-1 shrink-0">
-                            <button onclick="event.stopPropagation(); app.speakText('${this.escapeQuotes(chk.phrase || '')}')" class="w-6 h-6 rounded-lg bg-slate-50 hover:bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] border border-slate-200 cursor-pointer active:scale-95" title="Phát âm">
-                              <i class="fa-solid fa-volume-high"></i>
-                            </button>
-                            <button onclick="event.stopPropagation(); app.openYouGlish('${this.escapeQuotes(chk.phrase || '')}')" class="px-1.5 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold border border-blue-200 flex items-center gap-0.5 cursor-pointer active:scale-95" title="Xem trên YouGlish">
-                              <i class="fa-solid fa-earth-americas text-[9px]"></i>
-                              <span>YG</span>
-                            </button>
-                            <button onclick="event.stopPropagation(); app.saveVocabCard('${this.escapeQuotes(chk.phrase || '')}', '${this.escapeQuotes(chk.meaning || '')}', '${this.escapeQuotes(chk.ipa || '')}', '${this.escapeQuotes(chk.simpleEnglish || '')}', '${this.escapeQuotes(englishText)}', '${this.escapeQuotes(chk.grammar || '')}')" class="w-6 h-6 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 flex items-center justify-center text-[10px] border border-amber-200 cursor-pointer active:scale-95" title="Lưu thẻ từ vựng">
-                              <i class="fa-solid fa-star"></i>
-                            </button>
-                          </div>
-                        </div>
-                        <p class="text-slate-800 text-xs font-bold leading-snug">${this.escapeHtml(chk.meaning || '')}</p>
-                        ${chk.simpleEnglish ? `
-                          <p class="text-slate-500 text-[10px] italic leading-tight">💡 ${this.escapeHtml(chk.simpleEnglish)}</p>
-                        ` : ''}
-                      </div>
-                    `).join('')}
-                  </div>
-                </div>
-              ` : ''}
-            </div>
-
+          <!-- Action Buttons -->
+          <div class="flex items-center gap-1">
+            <button onclick="app.seekTo(${startTime}, true)" title="Xem video tại câu này" class="w-7 h-7 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 flex items-center justify-center border border-blue-200 shadow-2xs cursor-pointer active:scale-95 transition">
+              <i class="fa-solid fa-play text-blue-600 text-[10px]"></i>
+            </button>
+            <button onclick="app.speakText('${this.escapeQuotes(englishText)}')" title="Phát âm tiếng Anh" class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer active:scale-95 transition">
+              <i class="fa-solid fa-volume-high text-slate-600 text-[11px]"></i>
+            </button>
+            <button onclick="app.copyText('${this.escapeQuotes(englishText)}')" title="Sao chép câu" class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer active:scale-95 transition">
+              <i class="fa-regular fa-copy text-[11px]"></i>
+            </button>
+            <button onclick="app.deleteVachLaSentence(${sIdx})" title="Xóa câu này" class="w-7 h-7 rounded-lg bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center border border-slate-200 shadow-2xs cursor-pointer active:scale-95 transition">
+              <i class="fa-regular fa-trash-can text-[11px]"></i>
+            </button>
           </div>
-
         </div>
+
+        <!-- English Primary Sentence Line -->
+        <div class="space-y-1">
+          <p class="text-base sm:text-lg text-slate-900 font-bold leading-relaxed font-heading break-words select-text">${highlightedHtml}</p>
+        </div>
+
+        <!-- IPA Phonetic Box -->
+        ${ipaText ? `
+          <div class="flex items-start justify-between bg-indigo-50/60 px-3 py-1.5 rounded-xl border border-indigo-100/70 text-xs font-mono text-indigo-900 gap-2">
+            <div class="flex items-start gap-1.5 flex-1 min-w-0">
+              <span class="text-indigo-500 shrink-0 mt-0.5 text-xs">🗣️</span>
+              <span class="tracking-wide select-all font-semibold break-words whitespace-normal leading-relaxed text-[11px] sm:text-xs">/${this.escapeHtml(ipaText.replace(/^\/|\/$/g, ''))}/</span>
+            </div>
+            <button onclick="app.copyText('${this.escapeQuotes(ipaText)}')" class="text-indigo-400 hover:text-indigo-700 text-xs p-0.5 shrink-0 cursor-pointer active:scale-95" title="Copy IPA">
+              <i class="fa-regular fa-copy text-[10px]"></i>
+            </button>
+          </div>
+        ` : ''}
+
+        <!-- Vietnamese Translation Box -->
+        <div class="p-2.5 rounded-xl bg-slate-50/90 border border-slate-200/80 flex items-start gap-2 text-xs sm:text-sm">
+          <span class="shrink-0 mt-0.5">🇻🇳</span>
+          <p class="text-slate-800 font-medium leading-relaxed break-words flex-1">${this.escapeHtml(vietnameseText)}</p>
+        </div>
+
+        <!-- Key Chunks Interactive Chips Bar -->
+        ${chunks.length > 0 ? `
+          <div class="pt-1 space-y-1.5 border-t border-slate-100">
+            <div class="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+              <span class="flex items-center gap-1 text-blue-700 font-bold">
+                <i class="fa-solid fa-layer-group text-blue-500 text-[10px]"></i>
+                <span>${chunks.length} cụm từ quan trọng:</span>
+              </span>
+              <span class="text-[10px] text-slate-400 italic">Chạm để xem chi tiết</span>
+            </div>
+
+            <div class="flex flex-wrap gap-1.5">
+              ${chunks.map((chk, cIdx) => `
+                <button 
+                  onclick="app.showChunkPopup(${sIdx}, ${cIdx})" 
+                  class="px-2.5 py-1 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 hover:from-blue-100 hover:to-indigo-100 text-slate-900 border border-blue-200/80 text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-2xs"
+                  title="Xem nghĩa & tra YouGlish cho '${this.escapeQuotes(chk.phrase || '')}'"
+                >
+                  <span class="font-bold text-blue-900">${this.escapeHtml(chk.phrase || '')}</span>
+                  <span class="text-slate-500 font-normal text-[10px]">(${this.escapeHtml(chk.meaning || '')})</span>
+                  <i class="fa-solid fa-sparkles text-amber-500 text-[9px]"></i>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
       `;
 
-      resultsList.appendChild(scene);
+      resultsList.appendChild(card);
     });
   }
 
   /**
-   * Toggle Dropdown for chunks list on Back Face
+   * Open Smart Chunk Detail Modal from inline click
    */
-  toggleVachLaChunkDropdown(sIdx) {
-    const list = document.getElementById(`chunksDropdown_${sIdx}`);
-    const icon = document.getElementById(`iconChunkDropdown_${sIdx}`);
-    if (list) {
-      const isHidden = list.classList.contains('hidden');
-      if (isHidden) {
-        list.classList.remove('hidden');
-        if (icon) icon.className = 'fa-solid fa-chevron-up text-blue-600 text-[10px] shrink-0 transition-transform duration-200 ml-2';
-      } else {
-        list.classList.add('hidden');
-        if (icon) icon.className = 'fa-solid fa-chevron-down text-blue-600 text-[10px] shrink-0 transition-transform duration-200 ml-2';
-      }
+  showChunkPopup(sIdx, cIdx) {
+    if (!this.currentVachLaSentences || !this.currentVachLaSentences[sIdx]) return;
+    const item = this.currentVachLaSentences[sIdx];
+    const chk = item.chunks && item.chunks[cIdx];
+    if (!chk) return;
+    this.openVachLaChunkDetailModal(chk, item.english || '');
+  }
+
+  openVachLaChunkDetailModal(chk, englishSentence = '') {
+    this.activeModalChunk = chk;
+    this.activeModalChunkSentence = englishSentence;
+
+    const modal = document.getElementById('vachLaChunkDetailModal');
+    if (!modal) return;
+
+    const titleEl = document.getElementById('modalChunkPhraseTitle');
+    const ipaEl = document.getElementById('modalChunkIpaBadge');
+    const grammarEl = document.getElementById('modalChunkGrammarBadge');
+    const meaningEl = document.getElementById('modalChunkMeaningText');
+    const simpleEngBox = document.getElementById('modalChunkSimpleEnglishBox');
+    const simpleEngText = document.getElementById('modalChunkSimpleEnglishText');
+    const contextText = document.getElementById('modalChunkContextText');
+
+    if (titleEl) titleEl.textContent = chk.phrase || 'Phrase';
+    if (ipaEl) {
+      const cleanIpa = (chk.ipa || this.convertToIPA(chk.phrase || '')).replace(/^\/|\/$/g, '');
+      ipaEl.textContent = `/${cleanIpa}/`;
+    }
+    if (grammarEl) grammarEl.textContent = chk.grammar || 'Collocation / Phrase';
+    if (meaningEl) meaningEl.textContent = chk.meaning || 'Chưa có nghĩa';
+    
+    if (chk.simpleEnglish && chk.simpleEnglish.trim()) {
+      if (simpleEngBox) simpleEngBox.classList.remove('hidden');
+      if (simpleEngText) simpleEngText.textContent = chk.simpleEnglish;
+    } else {
+      if (simpleEngBox) simpleEngBox.classList.add('hidden');
+    }
+
+    if (contextText) {
+      contextText.textContent = englishSentence || chk.phrase || '';
+    }
+
+    modal.classList.remove('hidden');
+  }
+
+  closeVachLaChunkDetailModal() {
+    const modal = document.getElementById('vachLaChunkDetailModal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  speakCurrentModalChunk() {
+    if (this.activeModalChunk && this.activeModalChunk.phrase) {
+      this.speakText(this.activeModalChunk.phrase);
     }
   }
 
-  /**
-   * Toggle 3D Flip on a specific Vach La Sentence Card
-   */
-  toggleVachLaSentenceFlip(sIdx) {
-    const card = document.getElementById(`vachLaSentenceCard_${sIdx}`);
-    if (card) {
-      card.classList.toggle('is-flipped');
+  openModalChunkYouGlish() {
+    if (this.activeModalChunk && this.activeModalChunk.phrase) {
+      const phrase = this.activeModalChunk.phrase;
+      this.closeVachLaChunkDetailModal();
+      this.openYouGlish(phrase);
     }
   }
 
-  /**
-   * Master Toggle: Flip All Sentence Cards to Back or Front
-   */
-  toggleAllVachLaSentences(flipToBack) {
-    const cards = document.querySelectorAll('[id^="vachLaSentenceCard_"]');
-    cards.forEach(card => {
-      if (flipToBack) {
-        card.classList.add('is-flipped');
-      } else {
-        card.classList.remove('is-flipped');
-      }
-    });
-    this.showToast(flipToBack ? 'Đã lật tất cả sang Mặt 2 (Bản dịch & Cụm từ)!' : 'Đã lật tất cả về Mặt 1 (Câu Tiếng Anh)!', 'info');
+  saveCurrentModalChunkToVocab() {
+    if (this.activeModalChunk && this.activeModalChunk.phrase) {
+      const chk = this.activeModalChunk;
+      this.saveVocabCard(
+        chk.phrase,
+        chk.meaning || '',
+        chk.ipa || '',
+        chk.simpleEnglish || '',
+        this.activeModalChunkSentence || '',
+        chk.grammar || 'Collocation'
+      );
+      this.closeVachLaChunkDetailModal();
+    }
   }
 
   /**

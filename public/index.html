@@ -50,7 +50,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=3.0" />
 </head>
 <body class="h-screen bg-[#f8fafc] text-slate-900 flex font-sans overflow-hidden selection:bg-blue-500 selection:text-white">
 
@@ -3196,6 +3196,87 @@
           <i class="fa-solid fa-arrow-up-right-from-square text-xs text-slate-400 group-hover:text-white transition"></i>
         </button>
 
+  <!-- ================================================================= -->
+  <!-- MODAL: VẠCH LÁ TÌM SÂU CHUNK DETAIL / SMART LOOKUP SHEET        -->
+  <!-- ================================================================= -->
+  <div id="vachLaChunkDetailModal" onclick="if(event.target === this) app.closeVachLaChunkDetailModal()" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md hidden modal-overlay">
+    <div class="glass-panel bg-white w-full max-w-lg rounded-3xl p-5 sm:p-6 border border-blue-200 shadow-2xl space-y-4 modal-content max-h-[92vh] overflow-y-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-sm shadow-sm">
+            <i class="fa-solid fa-layer-group"></i>
+          </div>
+          <div>
+            <h4 class="font-heading font-bold text-sm text-slate-900">Chi Tiết Cụm Từ (Lexical Chunk)</h4>
+            <p class="text-[10px] text-slate-400">Giải nghĩa ngữ cảnh & học tương tác</p>
+          </div>
+        </div>
+        <button onclick="app.closeVachLaChunkDetailModal()" class="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-900 flex items-center justify-center transition cursor-pointer">
+          <i class="fa-solid fa-xmark text-xs"></i>
+        </button>
+      </div>
+
+      <!-- Phrase Title + Audio + IPA -->
+      <div class="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-2">
+        <div class="flex items-center justify-between gap-2">
+          <h3 id="modalChunkPhraseTitle" class="text-lg sm:text-xl font-black text-slate-900 font-heading break-words">Phrase</h3>
+          <button id="btnModalChunkSpeak" onclick="app.speakCurrentModalChunk()" class="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer shrink-0">
+            <i class="fa-solid fa-volume-high text-xs"></i>
+            <span>Nghe</span>
+          </button>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap text-xs">
+          <span id="modalChunkIpaBadge" class="font-mono text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 font-bold">/ipa/</span>
+          <span id="modalChunkGrammarBadge" class="text-[10px] px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 font-mono font-semibold">Collocation</span>
+        </div>
+      </div>
+
+      <!-- Meaning & Simple English Explanation -->
+      <div class="space-y-2.5 text-xs">
+        <div class="p-3 rounded-xl bg-white border border-slate-200 space-y-1 shadow-2xs">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nghĩa tiếng Việt:</span>
+          <p id="modalChunkMeaningText" class="text-slate-900 font-bold text-sm sm:text-base leading-snug">Meaning</p>
+        </div>
+
+        <div id="modalChunkSimpleEnglishBox" class="p-3 rounded-xl bg-amber-50/50 border border-amber-200/60 space-y-1">
+          <span class="text-[10px] font-bold text-amber-800 uppercase tracking-wider">💡 Giải thích tiếng Anh đơn giản:</span>
+          <p id="modalChunkSimpleEnglishText" class="text-slate-700 text-xs font-medium leading-relaxed italic">Simple English</p>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngữ cảnh trong câu:</span>
+          <p id="modalChunkContextText" class="text-slate-800 text-xs font-semibold leading-relaxed">Context sentence</p>
+        </div>
+      </div>
+
+      <!-- 1-Click Action Buttons: YouGlish & Save Flashcard -->
+      <div class="pt-2 grid grid-cols-2 gap-2 border-t border-slate-100">
+        <button 
+          id="btnModalChunkYouGlish"
+          onclick="app.openModalChunkYouGlish()" 
+          class="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-2xs"
+          title="Xem phát âm thực tế trên YouGlish"
+        >
+          <i class="fa-solid fa-earth-americas text-blue-600 text-sm"></i>
+          <span>Xem YouGlish</span>
+        </button>
+
+        <button 
+          id="btnModalChunkSaveVocab"
+          onclick="app.saveCurrentModalChunkToVocab()" 
+          class="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm shadow-orange-500/20"
+          title="Lưu vào Sổ từ vựng & Flashcards 3D"
+        >
+          <i class="fa-solid fa-star text-amber-200 text-xs"></i>
+          <span>Lưu Thẻ 3D</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
         <!-- Option 2: Y2Mate Backup -->
         <button 
           onclick="app.downloadViaY2Mate()" 
@@ -3476,6 +3557,6 @@
   <script src="https://www.youtube.com/iframe_api"></script>
 
   <!-- Application Logic -->
-  <script src="js/app.js?v=2.2"></script>
+  <script src="js/app.js?v=3.0"></script>
 </body>
 </html>
